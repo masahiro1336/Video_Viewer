@@ -1,0 +1,2372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAULT — Video Manager Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:wght@300;400;600&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://vjs.zencdn.net/8.17.3/video-js.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+<script src="https://vjs.zencdn.net/8.17.3/video.min.js"></script>
+<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #0a0a0b; --ink2: #111114; --ink3: #1a1a1f; --ink4: #242429; --ink5: #2e2e35;
+    --muted: #6b6b78; --muted2: #9898a5; --silver: #c8c8d2; --cream: #f0ede6;
+    --gold: #c9a84c; --gold2: #e8c870; --red: #d94040; --green: #3a9e6e; --blue: #5e8bff;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+    --radius: 8px; --radius-lg: 12px; --trans: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    --shadow: 0 16px 36px rgba(0,0,0,0.28);
+    --vault-cols: 3;
+  }
+  html, body { background: var(--ink); color: var(--cream); font-family: 'DM Sans', sans-serif; font-size: 14px; min-height: 100vh; overflow-x: hidden; }
+  button, input, textarea, select { font: inherit; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 2px solid rgba(201,168,76,0.8); outline-offset: 2px;
+  }
+
+  #auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .auth-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,168,76,0.08) 0%, transparent 60%), radial-gradient(ellipse 60% 80% at 80% 100%, rgba(60,60,80,0.4) 0%, transparent 50%); }
+  .auth-grain { position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E"); opacity: 0.6; }
+  .auth-card { position: relative; z-index: 1; width: 400px; background: var(--ink2); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 40px 36px; animation: fadeUp 0.5s ease both; box-shadow: var(--shadow); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .auth-logo { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 600; letter-spacing: 6px; color: var(--gold); text-align: center; margin-bottom: 4px; }
+  .auth-sub { text-align: center; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; }
+  .config-box { border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 12px; margin-bottom: 20px; background: rgba(201,168,76,0.06); font-size: 11px; line-height: 1.6; color: var(--muted2); }
+  .auth-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 0.5px solid var(--border2); border-radius: var(--radius); overflow: hidden; margin-bottom: 24px; }
+  .auth-tab { padding: 10px; text-align: center; font-size: 12px; letter-spacing: 1px; cursor: pointer; color: var(--muted); background: transparent; border: none; transition: var(--trans); }
+  .auth-tab.active { background: var(--ink4); color: var(--cream); }
+  .field-group { margin-bottom: 14px; }
+  .field-label { display: block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .field-input, .toolbar-input, .toolbar-select, .modal-input, .modal-textarea { width: 100%; background: var(--ink3); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 10px 12px; font-family: 'DM Mono', monospace; font-size: 13px; color: var(--cream); outline: none; transition: var(--trans); }
+  .field-input:focus, .toolbar-input:focus, .toolbar-select:focus, .modal-input:focus, .modal-textarea:focus { border-color: var(--gold); }
+  .field-input::placeholder, .toolbar-input::placeholder, .modal-input::placeholder, .modal-textarea::placeholder { color: var(--muted); }
+  .btn-primary, .btn-secondary, .btn-ghost, .btn-danger, .chip, .layout-btn { transition: var(--trans); }
+  .btn-primary { width: 100%; margin-top: 20px; padding: 12px; background: var(--gold); border: none; border-radius: var(--radius); font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--ink); cursor: pointer; }
+  .btn-primary:hover { background: var(--gold2); }
+  .btn-primary:disabled { opacity: 0.6; cursor: wait; }
+  .btn-secondary, .btn-ghost, .btn-danger { border-radius: var(--radius); padding: 10px 12px; cursor: pointer; }
+  .btn-secondary { width: 100%; margin-top: 8px; background: transparent; border: 0.5px solid var(--border2); color: var(--muted2); }
+  .btn-secondary:hover, .btn-ghost:hover { border-color: var(--gold); color: var(--cream); }
+  .btn-ghost { background: transparent; border: 0.5px solid var(--border2); color: var(--muted2); }
+  .btn-danger { background: transparent; border: 0.5px solid rgba(217,64,64,0.35); color: var(--red); }
+  .btn-danger:hover { background: rgba(217,64,64,0.08); }
+  .auth-msg { margin-top: 14px; font-size: 12px; text-align: center; min-height: 18px; line-height: 1.6; }
+  .auth-msg.error { color: var(--red); }
+  .auth-msg.success { color: var(--green); }
+  .auth-note { margin-top: 10px; font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  #app { display: none; min-height: 100vh; }
+  .topbar { position: sticky; top: 0; z-index: 170; background: rgba(10,10,11,0.92); backdrop-filter: blur(16px); border-bottom: 0.5px solid var(--border); display: flex; align-items: center; padding: 0 24px; min-height: 56px; gap: 16px; }
+  .topbar-logo { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; letter-spacing: 5px; color: var(--gold); flex: none; }
+  .topbar-user { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted2); background: var(--ink3); border: 0.5px solid var(--border2); padding: 4px 10px; border-radius: 20px; }
+  .guest-badge { color: var(--gold); }
+  .toolbar-block, .add-panel { background: var(--ink2); border-bottom: 0.5px solid var(--border); padding: 18px 24px; }
+  .section-kicker { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .toolbar-grid { display: grid; grid-template-columns: 1.4fr 0.7fr 0.6fr auto auto auto auto; gap: 10px; align-items: center; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip { border: 0.5px solid var(--border2); background: transparent; color: var(--muted2); padding: 7px 11px; border-radius: 999px; cursor: pointer; font-size: 11px; }
+  .chip.active, .chip:hover { background: var(--ink4); color: var(--cream); border-color: rgba(201,168,76,0.35); }
+  .add-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+  .url-textarea, .modal-textarea { resize: vertical; min-height: 88px; line-height: 1.7; }
+  .add-controls { display: flex; flex-direction: column; gap: 8px; }
+  .add-hint, .bulk-hint { margin-top: 8px; font-size: 11px; color: var(--muted); line-height: 1.6; }
+  .bulk-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+
+  .toolbar-grid-2 { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .stats-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .stat-pill { border: 0.5px solid var(--border2); background: rgba(255,255,255,0.02); color: var(--muted2); padding: 7px 10px; border-radius: 999px; font-size: 11px; }
+  .add-panel.collapsed .add-row, .add-panel.collapsed .add-hint, .add-panel.collapsed .draft-status { display: none; }
+  .add-panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .draft-status { margin-top: 10px; font-size: 11px; color: var(--muted2); display:flex; flex-wrap:wrap; gap:10px; }
+  .tag-badge.clickable { cursor:pointer; }
+  .tag-badge.clickable:hover { border-color: rgba(201,168,76,0.4); color: var(--cream); }
+  .shortcut-list { display:grid; gap:10px; font-size:12px; color:var(--muted2); }
+  .shortcut-item { display:flex; justify-content:space-between; gap:16px; padding:8px 0; border-bottom:0.5px solid var(--border); }
+  .shortcut-item kbd { font-family:'DM Mono', monospace; background:var(--ink3); border:0.5px solid var(--border2); border-radius:6px; padding:2px 8px; color:var(--cream); }
+  .bulk-counter { font-family: 'DM Mono', monospace; color: var(--muted2); font-size: 11px; padding: 0 2px; }
+
+  .grid-section { padding: 24px; }
+  .grid-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .grid-title-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .grid-title { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; letter-spacing: 2px; color: var(--silver); }
+  .grid-meta { font-size: 11px; color: var(--muted); }
+  .layout-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .layout-btn { background: transparent; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 6px 10px; font-size: 11px; color: var(--muted); cursor: pointer; }
+  .layout-btn.active { background: var(--ink4); color: var(--cream); border-color: var(--border2); }
+  .gh-layout-wrap { display:flex; align-items:center; gap:10px; min-width:220px; }
+  .gh-layout-wrap.compact { min-width: 180px; }
+  .gh-layout-step { width:28px; height:28px; border-radius:999px; border:0.5px solid var(--border2); background:var(--ink3); color:var(--cream); cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:'DM Mono', monospace; font-size:14px; line-height:1; transition:var(--trans); }
+  .gh-layout-step:hover { border-color: rgba(201,168,76,0.45); color: var(--gold2); }
+  .gh-layout-slider { -webkit-appearance:none; appearance:none; width:180px; height:24px; background:transparent; cursor:pointer; }
+  .gh-layout-slider::-webkit-slider-runnable-track { height:6px; border-radius:999px; background:linear-gradient(90deg, var(--gold) 0%, var(--gold2) 100%); }
+  .gh-layout-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; margin-top:-7px; width:20px; height:20px; border-radius:50%; background:var(--cream); border:2px solid var(--gold); box-shadow:0 1px 10px rgba(0,0,0,0.28); }
+  .gh-layout-slider::-moz-range-track { height:6px; border-radius:999px; background:linear-gradient(90deg, var(--gold) 0%, var(--gold2) 100%); }
+  .gh-layout-slider::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:var(--cream); border:2px solid var(--gold); box-shadow:0 1px 10px rgba(0,0,0,0.28); }
+
+  .grid-scroll { overflow-x:auto; overflow-y:hidden; padding-bottom:8px; }
+  .video-grid { display:grid; gap:16px; grid-template-columns: repeat(var(--vault-cols), minmax(260px, 1fr)); width:max(100%, calc(var(--vault-cols) * 260px + (var(--vault-cols) - 1) * 16px)); min-width:0; }
+  .video-card { background: var(--ink2); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: var(--trans); animation: fadeUp 0.3s ease both; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+  .video-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+  .video-card.selected { border-color: rgba(201,168,76,0.65); box-shadow: 0 0 0 1px rgba(201,168,76,0.15), 0 12px 28px rgba(0,0,0,0.22); }
+  .video-card-top { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
+  .video-select { appearance: none; width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border2); background: var(--ink3); cursor: pointer; position: relative; }
+  .video-select:checked { background: var(--gold); border-color: var(--gold); }
+  .video-index { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); min-width: 20px; }
+  .video-title-wrap { flex: 1; min-width: 0; }
+  .video-title { font-size: 13px; color: var(--cream); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .video-subline { display: flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+  .type-badge, .state-badge, .date-badge, .tag-badge { font-size: 10px; border: 0.5px solid var(--border2); color: var(--muted2); border-radius: 999px; padding: 2px 8px; }
+  .type-badge { color: var(--gold2); border-color: rgba(201,168,76,0.35); }
+  .state-badge.favorite { color: #ffd86b; }
+  .state-badge.viewed { color: #83e0b1; }
+  .date-badge { color: var(--muted); }
+  .card-actions { display: flex; align-items: center; gap: 4px; }
+  .icon-btn { background: transparent; border: none; padding: 6px 8px; color: var(--muted); cursor: pointer; border-radius: var(--radius); transition: var(--trans); font-size: 14px; }
+  .icon-btn:hover { color: var(--cream); background: rgba(255,255,255,0.04); }
+  .icon-btn.favorite.active { color: #ffd86b; }
+  .icon-btn.viewed.active { color: #83e0b1; }
+  .video-embed-wrap { position: relative; padding-bottom: 56.25%; background: #000; }
+  .video-embed-wrap iframe, .video-embed-wrap video { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+  .video-embed-wrap img.media-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .audio-embed { position: absolute; inset: 0; display:flex; align-items:center; justify-content:center; padding:20px; background: linear-gradient(180deg, #111114 0%, #1a1a1f 100%); }
+  .audio-embed audio { width:min(92%, 560px); }
+  .media-error-note { margin-top: 8px; font-size: 11px; color: var(--red); text-align: center; line-height: 1.5; }
+  .local-note { font-size:11px; color:var(--muted2); line-height:1.6; margin-top:8px; }
+  .video-unsupported { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: var(--ink3); color: var(--muted); font-size: 12px; text-align: center; padding: 16px; }
+  .video-unsupported a { color: var(--gold); text-decoration: none; font-family: 'DM Mono', monospace; font-size: 11px; word-break: break-all; }
+  .video-card-footer { padding: 10px 14px; border-top: 0.5px solid var(--border); display: grid; gap: 8px; }
+  .video-url-row, .video-note-row, .video-tags-row { display: flex; align-items: center; gap: 8px; }
+  .video-url-snippet, .video-note-snippet { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .video-note-snippet { font-family: 'DM Sans', sans-serif; font-size: 11px; }
+  .video-tags-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+  .empty-state { padding: 90px 24px; text-align: center; color: var(--muted); }
+  .empty-state-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-state-text { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 300; color: var(--muted2); margin-bottom: 8px; }
+  .empty-state-sub { font-size: 12px; line-height: 1.7; }
+  .yt-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #000; cursor: pointer; overflow: hidden; }
+  .yt-fallback img.yt-thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.6; transition: opacity 0.3s; }
+  .yt-fallback:hover img.yt-thumb { opacity: 0.4; }
+  .yt-fallback-inner { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 16px; }
+  .yt-play-btn { width: 56px; height: 56px; background: rgba(201,168,76,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .yt-fallback-label { font-size: 11px; letter-spacing: 1px; color: rgba(240,237,230,0.7); }
+  .yt-fallback-open { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold); text-decoration: none; border: 0.5px solid rgba(201,168,76,0.4); padding: 4px 10px; border-radius: 4px; }
+  .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 200; display: flex; flex-direction: column; gap: 10px; max-width: min(360px, calc(100vw - 36px)); }
+  .toast { background: rgba(17,17,20,0.96); border: 0.5px solid var(--border2); border-left: 4px solid var(--gold); color: var(--cream); padding: 12px 14px; border-radius: 12px; box-shadow: var(--shadow); font-size: 12px; line-height: 1.5; animation: fadeUp 0.25s ease both; }
+  .toast.success { border-left-color: var(--green); }
+  .toast.error { border-left-color: var(--red); }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.62); display: none; align-items: center; justify-content: center; z-index: 180; padding: 20px; }
+  .modal-backdrop.open { display: flex; }
+  .modal-card { width: min(560px, 100%); background: var(--ink2); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); }
+  .modal-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; color: var(--silver); margin-bottom: 14px; }
+  .modal-row { display: grid; gap: 12px; }
+  .modal-textarea { min-height: 96px; font-family: 'DM Sans', sans-serif; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--ink5); border-radius: 2px; }
+
+  @media (max-width: 1024px) {
+    .toolbar-grid { grid-template-columns: 1fr 1fr 1fr auto; }
+  }
+  @media (max-width: 720px) {
+    .topbar, .toolbar-block, .add-panel, .grid-section { padding-left: 14px; padding-right: 14px; }
+    .topbar-count { display:none; }
+    .toolbar-grid { grid-template-columns: 1fr 1fr; }
+    .add-row { grid-template-columns: 1fr; }
+    .add-controls { flex-direction: row; flex-wrap: wrap; }
+    .auth-card { width: calc(100vw - 28px); padding: 30px 22px; }
+    .grid-header { align-items: flex-start; }
+  }
+
+  .sr-file-input { position: fixed; left: -9999px; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .media-controls {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    align-items: center;
+    padding: 10px 14px;
+    border-top: 0.5px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+  }
+  .media-control {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--muted2); font-size: 11px;
+  }
+  .media-control label { color: var(--muted); }
+  .media-control input[type="range"] { width: 120px; accent-color: var(--gold); }
+  .media-control select {
+    background: var(--ink3); color: var(--cream);
+    border: 0.5px solid var(--border2); border-radius: 8px;
+    padding: 6px 8px; font-size: 12px;
+  }
+  .audio-embed {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #111218; padding: 24px;
+  }
+  .audio-embed audio { width: min(680px, 92%); }
+
+  .audio-embed.audio-plyr-embed {
+    position: absolute; inset: 0;
+    display: flex; align-items: stretch; justify-content: stretch;
+    background:
+      radial-gradient(circle at 22% 18%, rgba(201,168,76,0.14) 0%, rgba(201,168,76,0) 28%),
+      radial-gradient(circle at 78% 28%, rgba(94,139,255,0.10) 0%, rgba(94,139,255,0) 30%),
+      linear-gradient(180deg, #090a10 0%, #0d0f16 100%);
+    padding: 0;
+  }
+  .audio-shell {
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    color: var(--cream);
+    padding: 18px 18px 14px;
+    background: linear-gradient(180deg, rgba(8,9,14,0.10) 0%, rgba(8,9,14,0.18) 35%, rgba(8,9,14,0.82) 100%);
+  }
+  .audio-shell-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .audio-shell-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--cream);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 2px 18px rgba(0,0,0,0.35);
+  }
+  .audio-shell-sub {
+    font-size: 11px;
+    color: rgba(240,237,230,0.72);
+    margin-top: 6px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .audio-shell .tag-badge {
+    color: var(--gold2);
+    border-color: rgba(201,168,76,0.28);
+    background: rgba(201,168,76,0.08);
+    backdrop-filter: blur(8px);
+  }
+  .audio-shell .plyr {
+    --plyr-color-main: #d86a1a;
+    --plyr-audio-controls-background: rgba(9,10,16,0.18);
+    --plyr-audio-control-color: #f0ede6;
+    --plyr-menu-background: #111218;
+    --plyr-menu-color: #f0ede6;
+    --plyr-range-thumb-height: 16px;
+    --plyr-range-thumb-background: #d86a1a;
+    --plyr-range-track-height: 4px;
+    --plyr-tooltip-background: #111218;
+    --plyr-tooltip-color: #ffffff;
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    background: transparent;
+    box-shadow: none;
+  }
+  .audio-shell .plyr--audio { background: transparent; }
+  .audio-shell .plyr--audio .plyr__controls {
+    background: rgba(9,10,16,0.12);
+    padding: 10px 0 0 0;
+    border-radius: 14px;
+  }
+  .audio-shell .plyr__time {
+    color: rgba(240,237,230,0.92);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  .audio-shell .plyr__control {
+    border-radius: 999px;
+    color: var(--cream);
+  }
+  .audio-shell .plyr__progress {
+    margin-bottom: 10px;
+  }
+  .audio-shell .plyr__control[data-plyr="play"],
+  .audio-shell .plyr__control:hover,
+  .audio-shell .plyr__control[aria-expanded="true"] {
+    background: rgba(216,106,26,0.18);
+  }
+  .poster-surface, .poster-video-surface { position:absolute; inset:0; width:100%; height:100%; background:#000; overflow:hidden; cursor:pointer; }
+  .poster-surface img, .poster-video-surface video { width:100%; height:100%; object-fit:cover; display:block; }
+  .poster-video-surface video { pointer-events:none; }
+  .poster-overlay { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; padding:18px; background:linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.18) 48%, rgba(0,0,0,0.74) 100%); }
+  .poster-play { width:58px; height:58px; border-radius:999px; border:1px solid rgba(255,255,255,0.16); background:rgba(10,10,11,0.56); color:var(--cream); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 10px 26px rgba(0,0,0,0.32); }
+  .poster-meta { display:flex; flex-direction:column; gap:6px; align-items:flex-start; max-width:72%; }
+  .poster-title { font-size:18px; font-weight:700; color:var(--cream); text-shadow:0 2px 16px rgba(0,0,0,0.35); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+  .poster-sub { font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:rgba(240,237,230,0.72); }
+  .media-mode-btns { display:flex; gap:6px; flex-wrap:wrap; }
+
+  /* ── QS-BAR (Quick Settings / Folder_Image_Viewer style) ── */
+  .qs-bar {
+    display: flex; align-items: center; flex-wrap: nowrap; gap: 0;
+    background: var(--ink2); border: 0.5px solid var(--border2); border-radius: var(--radius);
+    overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
+    margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  }
+  .qs-bar::-webkit-scrollbar { display: none; }
+  .qs-group { display: flex; align-items: center; gap: 5px; padding: 7px 10px; flex-shrink: 0; }
+  .qs-div { width: 0.5px; height: 28px; background: var(--border2); flex-shrink: 0; }
+  .qs-lbl {
+    font-family: 'DM Mono', monospace; font-size: 8px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted); margin-right: 4px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+  .seg-btn {
+    appearance: none; border: 0.5px solid var(--border2); background: transparent; color: var(--muted2);
+    padding: 0 10px; height: 30px; border-radius: 6px;
+    font-family: 'DM Mono', monospace; font-size: 10px; cursor: pointer;
+    transition: var(--trans); white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 4px; min-width: 34px; justify-content: center;
+  }
+  .seg-btn:hover { color: var(--cream); border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.07); }
+  .seg-btn.act {
+    color: var(--ink); border-color: var(--gold); background: linear-gradient(135deg, var(--gold), var(--gold2));
+    box-shadow: 0 2px 8px rgba(201,168,76,0.25);
+  }
+
+  /* Actions panel specific */
+  .actions-panel-inner { padding: 18px 24px; background: var(--ink2); border-bottom: 0.5px solid var(--border); }
+  .actions-panel-inner .section-kicker { margin-bottom: 14px; }
+  .actions-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .actions-section-label {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+    margin: 14px 0 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .actions-section-label::after { content:''; flex:1; height:0.5px; background: var(--border); }
+
+  @media (max-width: 720px) {
+    .actions-panel-inner { padding-left: 14px; padding-right: 14px; }
+  }
+
+  .local-library-bar { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+  .local-library-btn { min-width: 150px; }
+  .local-library-note { margin-top: 8px; font-size: 11px; color: var(--muted2); line-height: 1.7; }
+  .local-library-pill { color: var(--gold2); border-color: rgba(201,168,76,0.28); }
+  .video-js, .vjs-poster { width:100%; height:100%; }
+  .video-js .vjs-big-play-button { border-radius: 999px; }
+  .howler-player { display:flex; flex-direction:column; gap:14px; width:min(92%, 620px); padding:22px 20px; border:0.5px solid var(--border2); border-radius:18px; background:rgba(255,255,255,0.03); box-shadow:0 14px 30px rgba(0,0,0,0.24); }
+  .howler-head { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+  .howler-meta { min-width:0; }
+  .howler-title { font-size:14px; color:var(--cream); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .howler-sub { margin-top:4px; font-size:11px; color:var(--muted2); }
+  .howler-main { display:flex; align-items:center; gap:14px; }
+  .howler-play { width:54px; height:54px; border:none; border-radius:50%; background:var(--gold); color:var(--ink); font-size:18px; cursor:pointer; flex:none; }
+  .howler-play:hover { background:var(--gold2); }
+  .howler-timebox { flex:1; display:grid; gap:8px; }
+  .howler-progress { width:100%; accent-color: var(--gold); }
+  .howler-times { display:flex; justify-content:space-between; font-family:'DM Mono', monospace; font-size:11px; color:var(--muted2); }
+  .howler-extra { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+  .audio-embed .howler-player button:focus-visible, .audio-embed .howler-player input:focus-visible { outline: 2px solid rgba(201,168,76,0.8); outline-offset: 2px; }
+
+  /* ── APP TABS ── */
+  .app-tabs-wrap {
+    background: rgba(10,10,11,0.92);
+    border-bottom: 0.5px solid var(--border);
+    backdrop-filter: blur(16px);
+    position: sticky;
+    top: 56px;
+    z-index: 160;
+    padding: 0 24px;
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+  }
+  .app-tab {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 12px 16px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: var(--trans);
+    white-space: nowrap;
+    position: relative;
+  }
+  .app-tab:hover { color: var(--cream); }
+  .app-tab.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+  .app-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(201,168,76,0.15);
+    color: var(--gold2);
+    border-radius: 999px;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    padding: 1px 6px;
+    margin-left: 5px;
+    vertical-align: middle;
+  }
+  .app-tab-content {
+    display: none;
+  }
+  .app-tab-content.active {
+    display: block;
+  }
+  @media (max-width: 720px) {
+    .app-tabs-wrap { padding: 0 14px; top: 56px; }
+    .app-tab { padding: 10px 12px 8px; font-size: 11px; }
+  }
+
+</style>
+</head>
+<body>
+<div id="auth-screen">
+  <div class="auth-bg"></div>
+  <div class="auth-grain"></div>
+  <div class="auth-card">
+    <div class="auth-logo">VAULT</div>
+    <div class="auth-sub">Video Management System</div>
+    <div class="config-box">
+      初回に <strong>SUPABASE_URL</strong> と <strong>SUPABASE_ANON_KEY</strong> を設定してください。<br>
+      登録時は確認メール、本PW忘れ時は再設定メールを本送信します。ゲスト利用も可能です。
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">ログイン</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">新規登録</button>
+      <button class="auth-tab" id="tab-reset" onclick="switchTab('reset')">PW忘れ</button>
+    </div>
+    <div id="login-form">
+      <div class="field-group"><label class="field-label">Email</label><input type="email" class="field-input" id="login-email" placeholder="your@email.com" autocomplete="email"></div>
+      <div class="field-group"><label class="field-label">Password</label><input type="password" class="field-input" id="login-password" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="btn-primary" id="login-btn" onclick="handleLogin()">Enter Vault</button>
+      <button class="btn-secondary" id="guest-login-btn" onclick="handleGuestLogin()">ゲストで入る</button>
+      <div class="auth-note">ゲスト利用では動画一覧はこのブラウザ内にのみ保存されます。</div>
+    </div>
+    <div id="register-form" style="display:none">
+      <div class="field-group"><label class="field-label">Email</label><input type="email" class="field-input" id="reg-email" placeholder="your@email.com" autocomplete="email"></div>
+      <div class="field-group"><label class="field-label">Password（6文字以上）</label><input type="password" class="field-input" id="reg-password" placeholder="••••••••" autocomplete="new-password"></div>
+      <div class="field-group"><label class="field-label">Password（確認）</label><input type="password" class="field-input" id="reg-password2" placeholder="••••••••" autocomplete="new-password"></div>
+      <button class="btn-primary" id="register-btn" onclick="handleRegister()">確認メールを送信して登録</button>
+      <div class="auth-note">メール内の認証リンクを開いて登録を完了します。</div>
+    </div>
+    <div id="reset-form" style="display:none">
+      <div id="reset-request-block">
+        <div class="field-group"><label class="field-label">登録済みEmail</label><input type="email" class="field-input" id="reset-email" placeholder="your@email.com" autocomplete="email"></div>
+        <button class="btn-primary" id="reset-request-btn" onclick="handleResetRequest()">再設定メールを送信</button>
+        <div class="auth-note">メール内リンクをクリックすると、新しいパスワード設定画面に遷移します。</div>
+      </div>
+      <div id="reset-update-block" style="display:none">
+        <div class="field-group"><label class="field-label">新しいPassword（6文字以上）</label><input type="password" class="field-input" id="reset-new-pw" placeholder="••••••••" autocomplete="new-password"></div>
+        <div class="field-group"><label class="field-label">新しいPassword（確認）</label><input type="password" class="field-input" id="reset-new-pw2" placeholder="••••••••" autocomplete="new-password"></div>
+        <button class="btn-primary" id="reset-update-btn" onclick="handleResetUpdate()">パスワードを変更</button>
+      </div>
+    </div>
+    <button class="btn-secondary" id="resend-confirm-btn" onclick="handleResendConfirmation()" style="display:none">確認メールを再送</button>
+    <div class="auth-msg" id="auth-msg"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">VAULT</div>
+    <div class="topbar-user" id="topbar-email"></div>
+    <div class="topbar-count" id="topbar-count">0 items</div>
+    <button class="btn-ghost" onclick="handleLogout()">ログアウト</button>
+  </div>
+
+  <!-- App Tab Bar -->
+  <div class="app-tabs-wrap" id="app-tabs-wrap">
+    <button class="app-tab active" id="apptab-filter" onclick="switchAppTab('filter')">絞り込み</button>
+    <button class="app-tab" id="apptab-add" onclick="switchAppTab('add')">追加 <span class="app-tab-badge" id="apptab-add-badge" style="display:none">＋</span></button>
+    <button class="app-tab" id="apptab-actions" onclick="switchAppTab('actions')">アクション <span class="app-tab-badge" id="apptab-sel-badge">0</span></button>
+  </div>
+
+  <!-- Tab Content: Filter -->
+  <div class="app-tab-content active" id="apptab-content-filter">
+    <div class="toolbar-block">
+      <div class="toolbar-grid" style="grid-template-columns: 1.4fr 0.7fr auto auto;">
+        <input class="toolbar-input" id="search-input" placeholder="検索: タイトル / URL / メモ / タグ">
+        <select class="toolbar-select" id="sort-select">
+          <option value="newest">新しい順</option>
+          <option value="oldest">古い順</option>
+          <option value="title">タイトル順</option>
+          <option value="type">タイプ順</option>
+          <option value="favorites">お気に入り優先</option>
+        </select>
+        <div class="gh-layout-wrap compact">
+          <button class="gh-layout-step" type="button" data-layout-step="-1" aria-label="列数を減らす">−</button>
+          <input class="gh-layout-slider gh-layout-slider-sync" id="layout-slider-top" type="range" min="1" max="10" step="1" value="3" aria-label="列数">
+          <button class="gh-layout-step" type="button" data-layout-step="1" aria-label="列数を増やす">＋</button>
+        </div>
+        <button class="btn-ghost" id="clear-filters-btn">条件リセット</button>
+      </div>
+      <div class="stats-row" id="stats-row"></div>
+      <div class="chip-row" id="filter-chips">
+        <button class="chip active" data-filter="all">すべて</button>
+        <button class="chip" data-filter="favorites">★ お気に入り</button>
+        <button class="chip" data-filter="unviewed">未視聴</button>
+        <button class="chip" data-filter="local">ローカル</button>
+        <button class="chip" data-filter="audio">音楽</button>
+        <button class="chip" data-filter="youtube">YouTube</button>
+        <button class="chip" data-filter="vimeo">Vimeo</button>
+        <button class="chip" data-filter="behance">Behance</button>
+        <button class="chip" data-filter="gif">GIF</button>
+        <button class="chip" data-filter="direct">動画直リンク</button>
+        <button class="chip" data-filter="image">画像</button>
+      </div>
+      <div class="bulk-bar">
+        <span class="bulk-counter" id="selection-count">0 selected</span>
+        <span class="bulk-hint">Ctrl/⌘+K で検索、/ で即検索、Ctrl/⌘+Enter で追加。</span>
+      </div>
+      <div class="chip-row" id="recent-tags-row"></div>
+    </div>
+  </div>
+
+  <!-- Tab Content: Add -->
+  <div class="app-tab-content" id="apptab-content-add">
+    <div class="add-panel" id="add-panel">
+      <div class="add-panel-head">
+        <div><div class="section-kicker">Add URLs</div></div>
+        <button class="btn-ghost" id="toggle-add-panel-btn">入力欄をたたむ</button>
+      </div>
+      <div class="local-library-bar">
+        <button class="btn-primary local-library-btn" type="button" onclick="openLocalPicker()">ローカルファイルを選ぶ</button>
+      </div>
+      <div class="local-library-note">ローカル専用ライブラリモードでは、このPC・スマホで選択したファイルをライブラリ化します。動画は Video.js、音楽は howler.js で再生します。</div>
+      <div class="add-row">
+        <textarea class="field-input url-textarea" id="url-input" placeholder="URLを入力（1行に1つ）&#10;対応: YouTube, Vimeo, Behance, mp4/webm/mov, GIF, 画像&#10;複数入力で一括追加できます"></textarea>
+        <div class="add-controls">
+          <button class="btn-primary" style="margin-top:0" onclick="addUrls()">＋ 追加</button>
+          <button class="btn-ghost" onclick="clearAll()">すべて削除</button>
+          <input type="file" id="local-media-picker" accept="video/*,audio/*,image/*,.gif,.webp,.mp4,.webm,.mov,.m4v,.mp3,.wav,.m4a,.aac,.flac,.opus" multiple style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">
+          <input type="file" id="local-media-relink-picker" accept="video/*,audio/*,image/*,.gif,.webp,.mp4,.webm,.mov,.m4v,.mp3,.wav,.m4a,.aac,.flac,.opus" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">
+          <input type="file" id="import-file" accept="application/json" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none">
+        </div>
+      </div>
+      <div class="add-hint" id="add-hint">URL管理にも対応しますが、ローカル専用ライブラリとして使う場合は上の「ローカルファイルを選ぶ」を使うのが最も安定します。1回の選択で画像・動画・音楽をまとめて追加できます。Windows の C:\\... パスは自動で file:/// に変換します。http/https で開いたページでは任意のローカルパスを直接読めないことがあるため、その場合はファイル選択から追加してください。</div>
+      <div class="draft-status" id="draft-status"><span>入力待機中</span></div>
+    </div>
+  </div>
+
+  <!-- Tab Content: Actions -->
+  <div class="app-tab-content" id="apptab-content-actions">
+    <div class="actions-panel-inner" id="actions-panel">
+      <div class="section-kicker">Actions & Bulk Operations</div>
+
+      <div class="actions-section-label">選択操作</div>
+      <div class="actions-grid">
+        <button class="btn-ghost" id="select-all-btn">全選択</button>
+        <button class="btn-ghost" id="clear-selection-btn">選択解除</button>
+        <button class="btn-ghost" id="copy-selected-btn">選択URLコピー</button>
+        <button class="btn-ghost" id="open-selected-btn">選択を外部で開く</button>
+        <button class="btn-danger" id="bulk-delete-btn">選択削除</button>
+      </div>
+
+      <div class="actions-section-label">ステータス変更</div>
+      <div class="actions-grid">
+        <button class="btn-ghost" id="favorite-selected-btn">選択を★化</button>
+        <button class="btn-ghost" id="unfavorite-selected-btn">選択★解除</button>
+        <button class="btn-ghost" id="viewed-selected-btn">選択を視聴済み</button>
+        <button class="btn-ghost" id="unviewed-selected-btn">選択を未視聴へ</button>
+      </div>
+
+      <div class="actions-section-label">タグ管理</div>
+      <div class="actions-grid">
+        <button class="btn-ghost" id="tag-selected-btn">選択へタグ追加</button>
+        <button class="btn-ghost" id="untag-selected-btn">選択からタグ削除</button>
+      </div>
+
+      <div class="actions-section-label">ライブラリ管理</div>
+      <div class="actions-grid">
+        <button class="btn-ghost" id="export-btn">JSON書き出し</button>
+        <button class="btn-ghost" id="import-open-btn">JSON読み込み</button>
+        <button class="btn-ghost" id="dedupe-btn">重複整理</button>
+        <button class="btn-ghost" id="random-open-btn">ランダムに開く</button>
+        <button class="btn-ghost" id="shortcuts-btn">ショートカット</button>
+      </div>
+
+      <div class="bulk-bar" style="margin-top:16px;">
+        <span class="bulk-counter" id="selection-count-actions"></span>
+        <span class="bulk-hint">Ctrl/⌘+Shift+A で全選択 / Ctrl/⌘+Shift+R で条件リセット。</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-section">
+    <div class="grid-header">
+      <div class="grid-title-wrap">
+        <div class="grid-title">Collection</div>
+        <div class="grid-meta" id="grid-meta">0件</div>
+      </div>
+    </div>
+
+    <!-- QS-BAR: Folder_Image_Viewer style quick settings -->
+    <div class="qs-bar">
+      <div class="qs-group">
+        <span class="qs-lbl">表示</span>
+        <div class="seg" id="qs-media-view">
+          <button class="seg-btn act" data-mv="player" title="プレイヤー表示">▶ 通常</button>
+          <button class="seg-btn" data-mv="poster" title="ポスター表示">⊡ ポスター</button>
+        </div>
+      </div>
+      <div class="qs-div"></div>
+      <div class="qs-group">
+        <span class="qs-lbl">列</span>
+        <div class="seg" id="qs-cols">
+          <button class="seg-btn" data-col="1">1</button>
+          <button class="seg-btn" data-col="2">2</button>
+          <button class="seg-btn act" data-col="3">3</button>
+          <button class="seg-btn" data-col="4">4</button>
+          <button class="seg-btn" data-col="5">5</button>
+        </div>
+      </div>
+      <div class="qs-div"></div>
+      <div class="qs-group">
+        <span class="qs-lbl">ソート</span>
+        <div class="seg" id="qs-sort">
+          <button class="seg-btn act" data-sort="newest">新着</button>
+          <button class="seg-btn" data-sort="oldest">古い</button>
+          <button class="seg-btn" data-sort="title">名前</button>
+          <button class="seg-btn" data-sort="favorites">★先</button>
+        </div>
+      </div>
+      <div class="qs-div"></div>
+      <div class="qs-group">
+        <span class="qs-lbl">絞込</span>
+        <div class="seg" id="qs-filter">
+          <button class="seg-btn act" data-qf="all">全</button>
+          <button class="seg-btn" data-qf="favorites">★</button>
+          <button class="seg-btn" data-qf="unviewed">未視聴</button>
+          <button class="seg-btn" data-qf="youtube">YT</button>
+          <button class="seg-btn" data-qf="audio">♪</button>
+          <button class="seg-btn" data-qf="local">Local</button>
+        </div>
+      </div>
+      <div class="qs-div"></div>
+      <div class="qs-group">
+        <div class="gh-layout-wrap compact" style="min-width:160px;">
+          <button class="gh-layout-step" type="button" data-layout-step="-1" aria-label="列数を減らす">−</button>
+          <input class="gh-layout-slider gh-layout-slider-sync" id="layout-slider-bottom" type="range" min="1" max="10" step="1" value="3" aria-label="列数">
+          <button class="gh-layout-step" type="button" data-layout-step="1" aria-label="列数を増やす">＋</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-scroll" id="grid-scroll"><div class="video-grid layout-1" id="video-grid"></div></div>
+    <div class="empty-state" id="empty-state">
+      <div class="empty-state-icon">▶</div>
+      <div class="empty-state-text">Your vault is empty</div>
+      <div class="empty-state-sub" id="empty-state-sub">上のボタンからローカル動画・音楽・画像を選んでライブラリへ追加してください</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="edit-modal">
+  <div class="modal-card">
+    <div class="modal-title">Item Editor</div>
+    <div class="modal-row">
+      <div>
+        <label class="field-label">タイトル</label>
+        <input class="modal-input" id="edit-title" placeholder="表示タイトル">
+      </div>
+      <div>
+        <label class="field-label">URL</label>
+        <input class="modal-input" id="edit-url" placeholder="https://...">
+      </div>
+      <div>
+        <label class="field-label">タグ（カンマ区切り）</label>
+        <input class="modal-input" id="edit-tags" placeholder="motion, reference, archive">
+      </div>
+      <div>
+        <label class="field-label">メモ</label>
+        <textarea class="modal-textarea" id="edit-note" placeholder="メモを入力"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeEditModal()">キャンセル</button>
+      <button class="btn-primary" style="width:auto;margin-top:0" onclick="saveEditModal()">保存</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-backdrop" id="shortcuts-modal">
+  <div class="modal-card">
+    <div class="modal-title">Shortcuts</div>
+    <div class="shortcut-list">
+      <div class="shortcut-item"><span>検索欄にフォーカス</span><kbd>Ctrl/⌘ + K</kbd></div>
+      <div class="shortcut-item"><span>検索欄にフォーカス</span><kbd>/</kbd></div>
+      <div class="shortcut-item"><span>URLを追加</span><kbd>Ctrl/⌘ + Enter</kbd></div>
+      <div class="shortcut-item"><span>モーダルを閉じる</span><kbd>Esc</kbd></div>
+      <div class="shortcut-item"><span>表示中アイテムを全選択/解除</span><kbd>Ctrl/⌘ + Shift + A</kbd></div>
+      <div class="shortcut-item"><span>条件リセット</span><kbd>Ctrl/⌘ + Shift + R</kbd></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="width:auto;margin-top:0" onclick="closeShortcutsModal()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+  const DB_NAME = 'vault_db_supabase';
+  const DB_VERSION = 2;
+  const VIDEOS_STORE = 'videos';
+  const APP_PREFS_KEY = 'vault_app_prefs_v2';
+  const URL_DRAFT_KEY = 'vault_url_draft_v1';
+  const GUEST_EMAIL = '__guest__@vault.local';
+
+  let db = null;
+  let currentUser = null;
+  let pendingEmailForResend = '';
+  let currentFilter = 'all';
+  let selectedIds = new Set();
+  let editTargetId = null;
+  let videosCache = [];
+  let mediaViewMode = (loadPrefs().mediaView || 'player');
+  const posterOpenIds = new Set();
+  const localSessionObjects = new Map();
+  const activeRenderObjectUrls = new Map();
+  const activeVideoJsPlayers = new Map();
+  const activePlyrPlayers = new Map();
+  const activeHowlPlayers = new Map();
+  const activeHowlStates = new Map();
+  const FILE_ACCEPT_TYPES = [{ description: 'Media', accept: { 'video/*': ['.mp4','.webm','.mov','.m4v','.ogv','.ogg'], 'audio/*': ['.mp3','.wav','.m4a','.aac','.flac','.opus','.oga'], 'image/*': ['.jpg','.jpeg','.png','.gif','.webp','.avif','.svg'] } }];
+
+  const prefs = loadPrefs();
+  const authMsgEl = document.getElementById('auth-msg');
+  let _currentSort = prefs.sort || 'newest';
+
+  const hasValidSupabaseConfig = () => SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('YOUR_SUPABASE_URL') && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_ANON_KEY');
+  const supabase = hasValidSupabaseConfig() ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }) : null;
+
+  function loadPrefs() {
+    try {
+      return JSON.parse(localStorage.getItem(APP_PREFS_KEY)) || { search: '', sort: 'newest', layout: 1, filter: 'all', mediaView: 'player' };
+    } catch { return { search: '', sort: 'newest', layout: 1, filter: 'all', mediaView: 'player' }; }
+  }
+  function savePrefs() {
+    localStorage.setItem(APP_PREFS_KEY, JSON.stringify({
+      search: document.getElementById('search-input')?.value || '',
+      sort: document.getElementById('sort-select')?.value || _currentSort || 'newest',
+      layout: currentLayoutCols,
+      filter: currentFilter,
+      mediaView: mediaViewMode
+    }));
+  }
+  function showMsg(msg, type='') { authMsgEl.innerHTML = msg; authMsgEl.className = 'auth-msg ' + type; }
+  function setBusy(btnId, busy) { const btn = document.getElementById(btnId); if (btn) btn.disabled = !!busy; }
+  const showToast = (...args) => toast(...args);
+
+  function toast(message, type='') {
+    const stack = document.getElementById('toast-stack');
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = message;
+    stack.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; }, 2600);
+    setTimeout(() => el.remove(), 3000);
+  }
+  function escapeHtml(text='') { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+  function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+  function currentRedirectUrl(mode) { const url = new URL(window.location.href); url.searchParams.set('auth_mode', mode); url.hash = ''; return url.toString(); }
+  function formatDate(ts) { return new Date(ts || Date.now()).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
+
+  function formatDateTime(ts) { return new Date(ts || Date.now()).toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+  function setDraftStatus(text) { const el = document.getElementById('draft-status'); if (el) el.innerHTML = text; }
+  function getUrlDraft() { try { return localStorage.getItem(URL_DRAFT_KEY) || ''; } catch { return ''; } }
+  function setUrlDraft(value) { try { localStorage.setItem(URL_DRAFT_KEY, value || ''); } catch {} }
+  function clearUrlDraft() { try { localStorage.removeItem(URL_DRAFT_KEY); } catch {} }
+  function getVisibleSelectedRows() { const shownIds = new Set(filteredVideos().map(v => v.id)); return videosCache.filter(v => shownIds.has(v.id) && selectedIds.has(v.id)); }
+  function getSelectedRows() { return videosCache.filter(v => selectedIds.has(v.id)); }
+  async function batchPatchSelected(patchFactory) {
+    const rows = getSelectedRows();
+    if (!rows.length) return toast('選択アイテムがありません', 'error');
+    for (const row of rows) await putVideoRecord({ ...row, ...patchFactory(row), updatedAt: Date.now() });
+    await renderVideos();
+  }
+  function updateStatsRow() {
+    const rows = videosCache || [];
+    const counts = {
+      total: rows.length,
+      favorite: rows.filter(v => v.favorite).length,
+      viewed: rows.filter(v => v.viewed).length,
+      gif: rows.filter(v => v.type === 'gif').length,
+      video: rows.filter(v => ['youtube','vimeo','direct','behance'].includes(v.type)).length,
+      audio: rows.filter(v => v.type === 'audio').length,
+      local: rows.filter(v => isLocalLibraryItem(v)).length,
+      image: rows.filter(v => ['image'].includes(v.type)).length,
+      note: rows.filter(v => (v.note || '').trim()).length,
+      tag: rows.filter(v => (v.tags || []).length).length
+    };
+    const el = document.getElementById('stats-row');
+    if (!el) return;
+    el.innerHTML = [
+      `総数 ${counts.total}`,
+      `★ ${counts.favorite}`,
+      `視聴済み ${counts.viewed}`,
+      `GIF ${counts.gif}`,
+      `動画 ${counts.video}`,
+      `音楽 ${counts.audio}`,
+      `ローカル ${counts.local}`,
+      `画像 ${counts.image}`,
+      `メモあり ${counts.note}`,
+      `タグあり ${counts.tag}`
+    ].map(v => `<span class="stat-pill">${v}</span>`).join('');
+  }
+  function updateRecentTagsRow() {
+    const box = document.getElementById('recent-tags-row');
+    if (!box) return;
+    const freq = new Map();
+    (videosCache || []).forEach(v => (v.tags || []).forEach(tag => freq.set(tag, (freq.get(tag) || 0) + 1)));
+    const topTags = [...freq.entries()].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0],'ja')).slice(0, 10);
+    if (!topTags.length) { box.innerHTML = ''; return; }
+    box.innerHTML = '<span class="bulk-hint">よく使うタグ:</span>' + topTags.map(([tag, n]) => `<button class="chip" onclick="applyTagSearch('${escapeHtml(tag).replace(/'/g, "\'")}')">#${escapeHtml(tag)} <span style="opacity:.7">${n}</span></button>`).join('');
+  }
+  window.applyTagSearch = async function(tag) {
+    document.getElementById('search-input').value = tag;
+    savePrefs();
+    await renderVideos();
+  };
+
+  function normalizeRecord(record) {
+    return {
+      id: record.id,
+      userEmail: record.userEmail,
+      url: record.url,
+      title: record.title || record.url,
+      addedAt: record.addedAt || Date.now(),
+      favorite: !!record.favorite,
+      viewed: !!record.viewed,
+      note: record.note || '',
+      tags: Array.isArray(record.tags) ? record.tags : [],
+      type: record.type || (parseVideoUrl(record.url)?.type || 'unknown'),
+      sourceKind: record.sourceKind || 'url',
+      originalLocalPath: record.originalLocalPath || '',
+      localSessionKey: record.localSessionKey || '',
+      localHandle: record.localHandle || null,
+      mimeType: record.mimeType || '',
+      volume: record.volume != null ? Number(record.volume) : 1,
+      playbackRate: record.playbackRate != null ? Number(record.playbackRate) : 1
+    };
+  }
+
+  function openDB() {
+    return new Promise((res, rej) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        let store;
+        if (!d.objectStoreNames.contains(VIDEOS_STORE)) {
+          store = d.createObjectStore(VIDEOS_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('userEmail', 'userEmail', { unique: false });
+        } else {
+          store = req.transaction.objectStore(VIDEOS_STORE);
+        }
+        if (!store.indexNames.contains('userEmail')) store.createIndex('userEmail', 'userEmail', { unique: false });
+      };
+      req.onsuccess = e => { db = e.target.result; res(db); };
+      req.onerror = () => rej(req.error);
+    });
+  }
+  function getVideosForUser(email) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction(VIDEOS_STORE, 'readonly');
+      const idx = tx.objectStore(VIDEOS_STORE).index('userEmail');
+      const req = idx.getAll(email);
+      req.onsuccess = () => res((req.result || []).map(normalizeRecord));
+      req.onerror = () => rej(req.error);
+    });
+  }
+  function addVideoRecord(record) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction(VIDEOS_STORE, 'readwrite');
+      const req = tx.objectStore(VIDEOS_STORE).add(record);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+  function putVideoRecord(record) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction(VIDEOS_STORE, 'readwrite');
+      const req = tx.objectStore(VIDEOS_STORE).put(record);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+  function getVideoById(id) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction(VIDEOS_STORE, 'readonly');
+      const req = tx.objectStore(VIDEOS_STORE).get(id);
+      req.onsuccess = () => res(req.result ? normalizeRecord(req.result) : null);
+      req.onerror = () => rej(req.error);
+    });
+  }
+  function deleteVideo(id) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction(VIDEOS_STORE, 'readwrite');
+      const req = tx.objectStore(VIDEOS_STORE).delete(id);
+      req.onsuccess = () => res();
+      req.onerror = () => rej(req.error);
+    });
+  }
+  async function clearAllVideos(email) {
+    const videos = await getVideosForUser(email);
+    return new Promise((res, rej) => {
+      const tx = db.transaction(VIDEOS_STORE, 'readwrite');
+      const store = tx.objectStore(VIDEOS_STORE);
+      videos.forEach(v => store.delete(v.id));
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    });
+  }
+
+  function revokeActiveRenderObjectUrl(videoId) {
+    const prev = activeRenderObjectUrls.get(String(videoId));
+    if (prev) { try { URL.revokeObjectURL(prev); } catch {} }
+    activeRenderObjectUrls.delete(String(videoId));
+  }
+
+  function setActiveRenderObjectUrl(videoId, url) {
+    const key = String(videoId);
+    const prev = activeRenderObjectUrls.get(key);
+    if (prev && prev !== url) { try { URL.revokeObjectURL(prev); } catch {} }
+    if (url) activeRenderObjectUrls.set(key, url);
+    else activeRenderObjectUrls.delete(key);
+  }
+
+  async function canUseFsAccess() {
+    return !!(window.isSecureContext && 'showOpenFilePicker' in window);
+  }
+
+  async function pickLocalFilesViaFsAccess(multiple = true) {
+    if (!(await canUseFsAccess())) return [];
+    try {
+      const handles = await window.showOpenFilePicker({ multiple, types: FILE_ACCEPT_TYPES, excludeAcceptAllOption: false });
+      return handles || [];
+    } catch (e) {
+      if (e?.name !== 'AbortError') console.error(e);
+      return [];
+    }
+  }
+
+  async function getFileFromHandle(handle, ask = false) {
+    if (!handle) return null;
+    try {
+      let perm = 'granted';
+      if (typeof handle.queryPermission === 'function') {
+        perm = await handle.queryPermission({ mode: 'read' });
+      }
+      if (perm !== 'granted' && ask && typeof handle.requestPermission === 'function') {
+        perm = await handle.requestPermission({ mode: 'read' });
+      }
+      if (perm !== 'granted') return null;
+      return await handle.getFile();
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
+
+  async function ensurePlayableSource(video, askPermission = false) {
+    if (!video) return null;
+    if (video.sourceKind === 'local-handle' && video.localHandle) {
+      const file = await getFileFromHandle(video.localHandle, askPermission);
+      if (!file) return null;
+      const objectUrl = URL.createObjectURL(file);
+      setActiveRenderObjectUrl(video.id, objectUrl);
+      return objectUrl;
+    }
+    if (video.sourceKind === 'local-object-url') {
+      return getLocalPlayableUrl(video);
+    }
+    revokeActiveRenderObjectUrl(video.id);
+    return null;
+  }
+
+  function makeLocalSessionKey(file) {
+    const safeName = String(file?.name || 'local').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(-60);
+    return 'local-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '-' + safeName;
+  }
+
+  function registerLocalSessionFile(file, existingKey = '') {
+    const key = existingKey || makeLocalSessionKey(file);
+    const prev = localSessionObjects.get(key);
+    if (prev?.objectUrl) {
+      try { URL.revokeObjectURL(prev.objectUrl); } catch {}
+    }
+    const objectUrl = URL.createObjectURL(file);
+    localSessionObjects.set(key, {
+      file,
+      objectUrl,
+      name: file?.name || '',
+      mimeType: file?.type || '',
+      type: inferTypeFromMime(file?.type || '', file?.name || '')
+    });
+    return key;
+  }
+
+  function getLocalPlayableUrl(video) {
+    if (!video || video.sourceKind !== 'local-object-url') return null;
+    if (video.localSessionKey && localSessionObjects.has(video.localSessionKey)) {
+      return localSessionObjects.get(video.localSessionKey).objectUrl;
+    }
+    return null;
+  }
+
+  function hasActiveLocalSessionFile(video) {
+    return !!getLocalPlayableUrl(video);
+  }
+
+  function normalizeLocalPath(raw) {
+    const value = raw.trim();
+    if (!value) return '';
+    if (/^file:\/\//i.test(value)) return value;
+    if (/^[a-zA-Z]:\\/.test(value)) return 'file:///' + value.replace(/\\/g, '/');
+    if (/^\\\\/.test(value)) return 'file:' + value.replace(/\\/g, '/');
+    return value;
+  }
+  function inferTypeFromMime(mime, fallbackName = '') {
+    const m = String(mime || '').toLowerCase();
+    const name = String(fallbackName || '').toLowerCase();
+    if (m.startsWith('video/')) return 'direct';
+    if (m.startsWith('audio/')) return 'audio';
+    if (m === 'image/gif' || /\.gif($|\?)/i.test(name)) return 'gif';
+    if (m.startsWith('image/')) return 'image';
+    if (/\.(mp4|webm|ogv|ogg|mov|m4v)($|\?)/i.test(name)) return 'direct';
+    if (/\.(mp3|wav|m4a|aac|flac|oga|opus)($|\?)/i.test(name)) return 'audio';
+    if (/\.(jpg|jpeg|png|webp|avif|svg)($|\?)/i.test(name)) return 'image';
+    return 'unknown';
+  }
+
+  function parseVideoUrl(raw) {
+    const normalized = normalizeLocalPath(raw);
+    const url = normalized.trim();
+    if (!url) return null;
+    const isLocal = /^file:\/\//i.test(url);
+    const isBlob = /^blob:/i.test(url);
+    const isLocalSession = /^local-session:\/\//i.test(url);
+    const isLocalHandle = /^local-handle:\/\//i.test(url);
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) return { type: 'youtube', id: ytMatch[1], url, isLocal, isBlob: false };
+    const vmMatch = url.match(/(?:vimeo\.com\/)(\d+)/);
+    if (vmMatch) return { type: 'vimeo', id: vmMatch[1], url, isLocal, isBlob: false };
+    const bhMatch = url.match(/behance\.net\/(?:gallery|project)\/(\d+)/i);
+    if (bhMatch) return { type: 'behance', id: bhMatch[1], url, isLocal, isBlob: false };
+    if (isLocalSession || isLocalHandle) return { type: 'unknown', url, isLocal: true, isBlob: false, isLocalSession: true, isLocalHandle };
+    if (isBlob) return { type: inferTypeFromMime('', url), url, isLocal: false, isBlob: true };
+    if (/\.(mp4|webm|ogv|ogg|mov|m4v)(\?.*)?$/i.test(url)) return { type: 'direct', url, isLocal, isBlob: false };
+    if (/\.(mp3|wav|m4a|aac|flac|oga|opus)(\?.*)?$/i.test(url)) return { type: 'audio', url, isLocal, isBlob: false };
+    if (/\.(gif)(\?.*)?$/i.test(url)) return { type: 'gif', url, isLocal, isBlob: false };
+    if (/\.(jpg|jpeg|png|webp|avif|svg)(\?.*)?$/i.test(url)) return { type: 'image', url, isLocal, isBlob: false };
+    if (url.startsWith('http') || isLocal || isLocalSession || isLocalHandle) return { type: 'unknown', url, isLocal: isLocal || isLocalSession || isLocalHandle, isBlob: false, isLocalSession, isLocalHandle };
+    return null;
+  }
+
+  function getEffectiveParsed(video) {
+    const parsed = parseVideoUrl(video.url) || { url: video.url, isLocal: /^file:\/\//i.test(video.url), isBlob: /^blob:/i.test(video.url) };
+    if (video && video.type && (!parsed.type || parsed.type === 'unknown' || parsed.isBlob)) parsed.type = video.type;
+    return parsed;
+  }
+  function getYoutubeEmbedSrc(videoId) {
+    const base = `https://www.youtube-nocookie.com/embed/${videoId}`;
+    const params = new URLSearchParams({ rel: '0', modestbranding: '1', playsinline: '1', enablejsapi: '1' });
+    if (location.protocol !== 'file:' && location.origin) params.set('origin', location.origin);
+    return `${base}?${params.toString()}`;
+  }
+  function getTitle(parsed, url) {
+    if (parsed.type === 'youtube') return 'YouTube — ' + parsed.id;
+    if (parsed.type === 'vimeo') return 'Vimeo — ' + parsed.id;
+    if (parsed.type === 'behance') return 'Behance — ' + parsed.id;
+    if (parsed.type === 'audio') { try { return decodeURIComponent(new URL(url).pathname.split('/').pop()) || 'Audio'; } catch { return 'Audio'; } }
+    if (parsed.type === 'gif') { try { return decodeURIComponent(new URL(url).pathname.split('/').pop()) || 'GIF'; } catch { return 'GIF'; } }
+    if (parsed.type === 'image') { try { return decodeURIComponent(new URL(url).pathname.split('/').pop()) || 'Image'; } catch { return 'Image'; } }
+    try { return new URL(url).hostname; } catch { return url; }
+  }
+  function isVideoLikeType(type) {
+    return ['youtube','vimeo','behance','direct'].includes(type);
+  }
+  function shouldRenderPosterMode(video, parsed) {
+    return mediaViewMode === 'poster' && isVideoLikeType(parsed?.type || video?.type) && !posterOpenIds.has(String(video.id));
+  }
+  function getPosterLabel(parsed) {
+    if (parsed?.type === 'youtube') return 'YouTube thumbnail';
+    if (parsed?.type === 'direct') return 'Video first frame';
+    if (parsed?.type === 'vimeo') return 'Vimeo preview';
+    if (parsed?.type === 'behance') return 'Behance preview';
+    return 'Media preview';
+  }
+  function buildPosterHtml(video, parsed, effectiveSrc) {
+    const title = escapeHtml(video.title || getTitle(parsed, effectiveSrc));
+    if (parsed?.type === 'youtube') {
+      return `<div class="poster-surface" onclick="openPosterPlayer(${video.id})"><img src="https://img.youtube.com/vi/${parsed.id}/hqdefault.jpg" alt="thumbnail"><div class="poster-overlay"><div class="poster-play">▶</div><div class="poster-meta"><div class="poster-title">${title}</div><div class="poster-sub">${getPosterLabel(parsed)}</div></div></div></div>`;
+    }
+    if (parsed?.type === 'direct') {
+      return `<div class="poster-video-surface" onclick="openPosterPlayer(${video.id})"><video muted playsinline preload="metadata" data-media-src="${effectiveSrc}"></video><div class="poster-overlay"><div class="poster-play">▶</div><div class="poster-meta"><div class="poster-title">${title}</div><div class="poster-sub">${getPosterLabel(parsed)}</div></div></div></div>`;
+    }
+    return `<div class="poster-surface" onclick="openPosterPlayer(${video.id})"><div class="poster-overlay"><div class="poster-play">▶</div><div class="poster-meta"><div class="poster-title">${title}</div><div class="poster-sub">${getPosterLabel(parsed)}</div></div></div></div>`;
+  }
+
+  function buildEmbedHtml(video, parsed) {
+    if (!parsed) return '<div class="video-unsupported"><span>無効なURL</span></div>';
+    const localPlayableUrl = video._playableUrl || getLocalPlayableUrl(video);
+    const effectiveSrc = localPlayableUrl || parsed.url;
+    if (shouldRenderPosterMode(video, parsed)) {
+      return buildPosterHtml(video, parsed, effectiveSrc);
+    }
+    if (parsed.type === 'youtube') {
+      if (location.protocol === 'file:') {
+        return `<div class="video-unsupported"><span>YouTube は file:// 直開きだと内部再生できません</span><span style="max-width:520px; line-height:1.7; color:var(--muted2);">Error 153 は Referer / origin が送れない時に出ます。http/https で配信してください。</span><a href="${parsed.url}" target="_blank" rel="noopener">YouTube で開く</a></div>`;
+      }
+      return `<iframe loading="lazy" id="yt-iframe-${parsed.id}" src="${getYoutubeEmbedSrc(parsed.id)}" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" onerror="window.showYtFallback('${parsed.id}')"></iframe>
+      <div class="yt-fallback" id="yt-fb-${parsed.id}" style="display:none" onclick="window.open('${parsed.url.replace(/'/g,'&apos;')}','_blank')"><img class="yt-thumb" src="https://img.youtube.com/vi/${parsed.id}/hqdefault.jpg" alt="YouTube thumbnail"><div class="yt-fallback-inner"><div class="yt-play-btn">▶</div><div class="yt-fallback-label">埋め込み不可 / 外部再生</div><a class="yt-fallback-open" href="${parsed.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">YouTube で開く ↗</a></div></div>`;
+    }
+    if (parsed.type === 'vimeo') return `<iframe loading="lazy" src="https://player.vimeo.com/video/${parsed.id}" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+    if (parsed.type === 'behance') return `<iframe loading="lazy" src="https://www.behance.net/embed/project/${parsed.id}?ilo0=1" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen allow="clipboard-write *; fullscreen *"></iframe>`;
+    if (parsed.type === 'direct') return `<video id="media-video-${video.id}" class="video-js vjs-default-skin vjs-big-play-centered" controls playsinline preload="metadata" data-media-src="${effectiveSrc}"></video><div class="media-error-note" id="media-error-${video.id}" style="display:none"></div>`;
+    if (parsed.type === 'audio') return `<div class="audio-embed audio-plyr-embed"><div class="audio-shell"><div class="audio-shell-head"><div><div class="audio-shell-title" title="${escapeHtml(video.title || 'Audio')}">${escapeHtml(video.title || 'Audio')}</div><div class="audio-shell-sub">ローカル音楽プレイヤー</div></div><span class="tag-badge local-library-pill">Audio Library</span></div><audio id="plyr-audio-${video.id}" class="plyr-audio" controls preload="metadata" data-media-src="${effectiveSrc}"></audio><div class="media-error-note" id="media-error-${video.id}" style="display:none"></div></div></div>`;
+    if (parsed.type === 'gif') return `<img class="media-img" src="${effectiveSrc}" alt="gif" loading="lazy">`;
+    if (parsed.type === 'image') return `<img class="media-img" src="${effectiveSrc}" alt="media" loading="lazy">`;
+    if ((video.sourceKind === 'local-object-url' || video.sourceKind === 'local-handle') && !localPlayableUrl) return `<div class="video-unsupported"><span>このローカルファイルをまだ再生用に接続できていません</span><span style="max-width:520px; line-height:1.7; color:var(--muted2);">ローカルファイルはブラウザの許可が必要です。下のボタンから同じファイルを選び直すと、このカード内で内部再生できます。File System Access API が使える環境では、次回以降も同じカードから再接続しやすくなります。</span><button class="btn-primary" type="button" style="width:auto; margin-top:8px; padding:10px 16px;" onclick="relinkLocalFile(${video.id})">このカードにローカルファイルを選択</button></div>`;
+    if (parsed.isLocal) return `<div class="video-unsupported"><span>このローカルパスは現在の開き方では直接読めません</span><span style="max-width:520px; line-height:1.7; color:var(--muted2);">http/https で開いたページではブラウザ制約で任意の file:/// を直接読めないことがあります。下のボタンから同じローカルファイルを選ぶと、このカード内で再生できます。</span><button class="btn-primary" type="button" style="width:auto; margin-top:8px; padding:10px 16px;" onclick="relinkLocalFile(${video.id})">このカードにローカルファイルを選択</button><a href="${parsed.url}" target="_blank" rel="noopener">ローカルファイルを開く</a></div>`;
+    return `<div class="video-unsupported"><span>プレビュー非対応</span><a href="${parsed.url}" target="_blank" rel="noopener">${parsed.url}</a></div>`;
+  }
+
+  function getSearchValue() { return (document.getElementById('search-input').value || '').trim().toLowerCase(); }
+  function matchesFilter(video) {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'favorites') return !!video.favorite;
+    if (currentFilter === 'unviewed') return !video.viewed;
+    if (currentFilter === 'local') return isLocalLibraryItem(video);
+    return video.type === currentFilter;
+  }
+  function matchesSearch(video) {
+    const q = getSearchValue();
+    if (!q) return true;
+    const hay = [video.title, video.url, video.note, ...(video.tags || [])].join(' ').toLowerCase();
+    return hay.includes(q);
+  }
+
+  function sortVideos(items) {
+    const sortEl = document.getElementById('sort-select');
+    const sort = sortEl ? sortEl.value : _currentSort;
+    const sorted = [...items];
+    sorted.sort((a, b) => {
+      if (sort === 'newest') return (b.addedAt || 0) - (a.addedAt || 0);
+      if (sort === 'oldest') return (a.addedAt || 0) - (b.addedAt || 0);
+      if (sort === 'title') return (a.title || '').localeCompare(b.title || '', 'ja');
+      if (sort === 'type') return (a.type || '').localeCompare(b.type || '', 'ja') || (b.addedAt || 0) - (a.addedAt || 0);
+      if (sort === 'favorites') return Number(b.favorite) - Number(a.favorite) || (b.addedAt || 0) - (a.addedAt || 0);
+      return 0;
+    });
+    return sorted;
+  }
+  function filteredVideos() { return sortVideos(videosCache.filter(v => matchesFilter(v) && matchesSearch(v))); }
+  function updateSelectionCounter() {
+    const txt = `${selectedIds.size} selected`;
+    document.getElementById('selection-count').textContent = txt;
+    const el2 = document.getElementById('selection-count-actions');
+    if (el2) el2.textContent = selectedIds.size ? txt : '';
+    updateAppTabSelectionBadge();
+  }
+
+  window.showYtFallback = function(id) {
+    const iframe = document.getElementById('yt-iframe-' + id);
+    const fb = document.getElementById('yt-fb-' + id);
+    if (iframe) iframe.style.display = 'none';
+    if (fb) fb.style.display = 'flex';
+  };
+
+
+  function triggerFilePicker(input) {
+    if (!input) return false;
+    try {
+      input.value = '';
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+        return true;
+      }
+      input.click();
+      return true;
+    } catch (e) {
+      console.error(e);
+      try {
+        input.click();
+        return true;
+      } catch (e2) {
+        console.error(e2);
+        return false;
+      }
+    }
+  }
+
+  function openImportPicker() {
+    const input = document.getElementById('import-file');
+    if (!triggerFilePicker(input)) {
+      showToast('JSON読込ダイアログを開けませんでした', 'error');
+    }
+  }
+
+
+  function isLocalLibraryItem(video) {
+    return !!(video && (String(video.sourceKind || '').startsWith('local-') || /^file:\/\//i.test(video.url || '') || /^local-(session|handle):\/\//i.test(video.url || '')));
+  }
+
+  function cleanupRenderedMedia() {
+    activeVideoJsPlayers.forEach(player => { try { player.dispose(); } catch {} });
+    activeVideoJsPlayers.clear();
+    activePlyrPlayers.forEach(player => { try { player.destroy(); } catch {} });
+    activePlyrPlayers.clear();
+    activeHowlPlayers.forEach(howl => { try { howl.unload(); } catch {} });
+    activeHowlPlayers.clear();
+    activeHowlStates.clear();
+  }
+
+  function formatClock(sec) {
+    const safe = Math.max(0, Number(sec) || 0);
+    const m = Math.floor(safe / 60);
+    const s = Math.floor(safe % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  function inferMimeFromVideo(video) {
+    if (video?.mimeType) return video.mimeType;
+    const url = String(video?.url || '').toLowerCase();
+    if (url.endsWith('.mp4')) return 'video/mp4';
+    if (url.endsWith('.webm')) return 'video/webm';
+    if (url.endsWith('.mov') || url.endsWith('.m4v')) return 'video/mp4';
+    if (url.endsWith('.mp3')) return 'audio/mpeg';
+    if (url.endsWith('.wav')) return 'audio/wav';
+    if (url.endsWith('.m4a')) return 'audio/mp4';
+    return '';
+  }
+
+  function renderHowlerUi(videoId) {
+    const state = activeHowlStates.get(String(videoId));
+    const wrap = document.querySelector(`[data-howler-id="${videoId}"]`);
+    if (!state || !wrap) return;
+    wrap.innerHTML = `
+      <div class="howler-player">
+        <div class="howler-head">
+          <div class="howler-meta">
+            <div class="howler-title" title="${escapeHtml(state.title)}">${escapeHtml(state.title)}</div>
+            <div class="howler-sub">howler.js / ローカル音楽プレイヤー</div>
+          </div>
+          <span class="tag-badge local-library-pill">Audio Library</span>
+        </div>
+        <div class="howler-main">
+          <button class="howler-play" type="button" onclick="toggleHowlerPlay(${videoId})">${state.playing ? '❚❚' : '▶'}</button>
+          <div class="howler-timebox">
+            <input class="howler-progress" type="range" min="0" max="${Math.max(1, state.duration || 1)}" step="0.01" value="${Math.min(state.seek || 0, Math.max(1, state.duration || 1))}" oninput="seekHowler(${videoId}, this.value)">
+            <div class="howler-times"><span>${formatClock(state.seek)}</span><span>${formatClock(state.duration)}</span></div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function syncHowlerState(videoId) {
+    const howl = activeHowlPlayers.get(String(videoId));
+    const prev = activeHowlStates.get(String(videoId));
+    if (!howl || !prev) return;
+    const next = { ...prev, seek: howl.seek() || 0, duration: howl.duration() || prev.duration || 0, playing: howl.playing() };
+    activeHowlStates.set(String(videoId), next);
+    renderHowlerUi(videoId);
+  }
+
+  function initializeHowlerPlayer(videoId, videoRecord, src) {
+    const key = String(videoId);
+    const container = document.querySelector(`[data-howler-id="${videoId}"]`);
+    if (!container) return;
+    const old = activeHowlPlayers.get(key);
+    if (old) { try { old.unload(); } catch {} }
+    if (typeof Howl !== 'function') {
+      container.innerHTML = '<div class="media-error-note" style="display:block">howler.js の読み込みに失敗しました</div>';
+      return;
+    }
+    activeHowlStates.set(key, { title: videoRecord.title || 'Audio', seek: 0, duration: 0, playing: false });
+    const howl = new Howl({
+      src: [src],
+      html5: true,
+      preload: true,
+      volume: getVolumeValue(videoRecord),
+      rate: getRateValue(videoRecord),
+      format: videoRecord.mimeType ? undefined : undefined,
+      onload: () => syncHowlerState(videoId),
+      onplay: () => syncHowlerState(videoId),
+      onpause: () => syncHowlerState(videoId),
+      onstop: () => syncHowlerState(videoId),
+      onend: () => syncHowlerState(videoId),
+      onseek: () => syncHowlerState(videoId),
+      onloaderror: () => showMediaError(videoId, '音楽ファイルの読み込みに失敗しました'),
+      onplayerror: () => showMediaError(videoId, '音楽ファイルを再生できませんでした')
+    });
+    activeHowlPlayers.set(key, howl);
+    renderHowlerUi(videoId);
+    const tick = () => {
+      if (!activeHowlPlayers.has(key)) return;
+      if (howl.playing()) syncHowlerState(videoId);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  function getCardMediaEl(videoId) {
+    const card = document.querySelector('.video-card[data-id="' + videoId + '"]');
+    if (!card) return null;
+    return card.querySelector('video, audio');
+  }
+
+  function showMediaError(videoId, msg) {
+    const el = document.getElementById('media-error-' + videoId);
+    if (!el) return;
+    el.textContent = msg || 'このファイルはこのブラウザで再生できません';
+    el.style.display = 'block';
+  }
+
+  function clearMediaError(videoId) {
+    const el = document.getElementById('media-error-' + videoId);
+    if (!el) return;
+    el.textContent = '';
+    el.style.display = 'none';
+  }
+
+  function initializeCardMedia(videoId, videoRecord) {
+    if (videoRecord?.type === 'audio') {
+      clearMediaError(videoId);
+      const media = document.getElementById('plyr-audio-' + videoId);
+      const src = media?.dataset.mediaSrc || '';
+      if (!media || !src) {
+        showMediaError(videoId, '音楽ファイルの接続に失敗しました');
+        return;
+      }
+      media.src = src;
+      media.volume = getVolumeValue(videoRecord);
+      media.playbackRate = getRateValue(videoRecord);
+      media.onloadedmetadata = () => clearMediaError(videoId);
+      media.oncanplay = () => clearMediaError(videoId);
+      media.onerror = () => {
+        const err = media.error;
+        const codeMap = { 1: '再生が中断されました', 2: '音楽ファイルの読み込みに失敗しました', 3: '音楽ファイルのデコードに失敗しました', 4: 'このブラウザが対応しない形式またはコーデックです' };
+        showMediaError(videoId, codeMap[err?.code] || '音楽ファイルの読み込みに失敗しました');
+      };
+      media.load();
+      if (typeof Plyr === 'function') {
+        const oldPlyr = activePlyrPlayers.get(String(videoId));
+        if (oldPlyr) { try { oldPlyr.destroy(); } catch {} }
+        const player = new Plyr(media, {
+          controls: ['progress','current-time','duration','mute','volume','play','rewind','fast-forward','settings','airplay','fullscreen'],
+          settings: ['speed'],
+          speed: { selected: getRateValue(videoRecord), options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+          tooltips: { controls: true, seek: true },
+          keyboard: { focused: true, global: false }
+        });
+        player.on('ready', () => {
+          try { player.volume = getVolumeValue(videoRecord); } catch {}
+          try { player.speed = getRateValue(videoRecord); } catch {}
+        });
+        player.on('volumechange', async () => {
+          const fresh = await getVideoById(videoId);
+          if (!fresh) return;
+          await putVideoRecord({ ...fresh, volume: Number(player.volume || 0), updatedAt: Date.now() });
+        });
+        player.on('ratechange', async () => {
+          const fresh = await getVideoById(videoId);
+          if (!fresh) return;
+          await putVideoRecord({ ...fresh, playbackRate: Number(player.speed || 1), updatedAt: Date.now() });
+        });
+        activePlyrPlayers.set(String(videoId), player);
+      }
+      return;
+    }
+    const media = getCardMediaEl(videoId);
+    if (!media) return;
+    const src = media.dataset.mediaSrc || media.getAttribute('src') || '';
+    if (src && media.getAttribute('src') !== src) {
+      media.src = src;
+    }
+    media.onloadedmetadata = () => clearMediaError(videoId);
+    media.oncanplay = () => clearMediaError(videoId);
+    media.onerror = () => {
+      const err = media.error;
+      const codeMap = { 1: '再生が中断されました', 2: 'ネットワークまたはURLの読み込みに失敗しました', 3: 'ファイルのデコードに失敗しました', 4: 'このブラウザが対応しない形式またはコーデックです' };
+      showMediaError(videoId, codeMap[err?.code] || 'このファイルはこのブラウザで再生できません');
+    };
+    if (videoRecord?.type === 'direct' && typeof videojs === 'function' && media.classList.contains('video-js')) {
+      let player = activeVideoJsPlayers.get(String(videoId));
+      if (player) { try { player.dispose(); } catch {} }
+      player = videojs(media, { controls: true, preload: 'metadata', fluid: true, playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2] });
+      player.src({ src, type: inferMimeFromVideo(videoRecord) || undefined });
+      player.ready(() => {
+        player.volume(getVolumeValue(videoRecord));
+        player.playbackRate(getRateValue(videoRecord));
+      });
+      player.on('loadedmetadata', () => clearMediaError(videoId));
+      player.on('error', () => showMediaError(videoId, 'Video.js で動画を再生できませんでした'));
+      activeVideoJsPlayers.set(String(videoId), player);
+      return;
+    }
+    media.load();
+    applyMediaStateToElement(videoId, videoRecord);
+  }
+
+  function getVolumeValue(video) {
+    const value = Number(video && video.volume != null ? video.volume : 1);
+    if (!Number.isFinite(value)) return 1;
+    return Math.max(0, Math.min(1, value));
+  }
+
+  function getRateValue(video) {
+    const value = Number(video && video.playbackRate != null ? video.playbackRate : 1);
+    if (!Number.isFinite(value)) return 1;
+    return Math.max(0.25, Math.min(3, value));
+  }
+
+  function buildMediaControlsHtml(video) {
+    return '';
+  }
+
+  function applyMediaStateToElement(videoId, videoRecord) {
+    if (videoRecord?.type === 'audio') {
+      const plyr = activePlyrPlayers.get(String(videoId));
+      const audioEl = document.getElementById('plyr-audio-' + videoId);
+      if (audioEl) {
+        audioEl.volume = getVolumeValue(videoRecord);
+        audioEl.playbackRate = getRateValue(videoRecord);
+      }
+      if (plyr) {
+        try { plyr.volume = getVolumeValue(videoRecord); } catch {}
+        try { plyr.speed = getRateValue(videoRecord); } catch {}
+      }
+      return;
+    }
+    const media = getCardMediaEl(videoId);
+    if (!media) return;
+    media.volume = getVolumeValue(videoRecord);
+    media.playbackRate = getRateValue(videoRecord);
+    if (['direct', 'audio'].includes(videoRecord.type)) {
+      media.muted = false;
+      media.defaultMuted = false;
+    }
+  }
+
+  window.previewMediaVolume = function(videoId, rawValue) {
+    const pct = Math.max(0, Math.min(100, Number(rawValue) || 0));
+    const label = document.getElementById('media-volume-label-' + videoId);
+    if (label) label.textContent = pct + '%';
+    const media = getCardMediaEl(videoId);
+    if (media) media.volume = pct / 100;
+    const howl = activeHowlPlayers.get(String(videoId));
+    if (howl) howl.volume(pct / 100);
+  };
+
+  window.saveMediaVolume = async function(videoId, rawValue) {
+    const pct = Math.max(0, Math.min(100, Number(rawValue) || 0));
+    const media = getCardMediaEl(videoId);
+    if (media) media.volume = pct / 100;
+    const howl = activeHowlPlayers.get(String(videoId));
+    if (howl) howl.volume(pct / 100);
+    await upsertVideoFields(videoId, { volume: pct / 100 }, { skipRender: true });
+  };
+
+  window.savePlaybackRate = async function(videoId, rawValue) {
+    const rate = Math.max(0.25, Math.min(3, Number(rawValue) || 1));
+    const media = getCardMediaEl(videoId);
+    if (media) media.playbackRate = rate;
+    const howl = activeHowlPlayers.get(String(videoId));
+    if (howl) howl.rate(rate);
+    await upsertVideoFields(videoId, { playbackRate: rate }, { skipRender: true });
+  };
+
+
+  window.toggleHowlerPlay = function(videoId) {
+    const howl = activeHowlPlayers.get(String(videoId));
+    if (!howl) return;
+    if (howl.playing()) howl.pause(); else howl.play();
+    syncHowlerState(videoId);
+  };
+
+  window.seekHowler = function(videoId, rawValue) {
+    const howl = activeHowlPlayers.get(String(videoId));
+    if (!howl) return;
+    const sec = Math.max(0, Number(rawValue) || 0);
+    howl.seek(sec);
+    syncHowlerState(videoId);
+  };
+
+    async function attachLocalFiles(files) {
+    if (!files || !files.length || !currentUser) return;
+    let added = 0;
+    for (const file of files) {
+      try {
+        const sessionKey = registerLocalSessionFile(file);
+        const type = inferTypeFromMime(file.type, file.name);
+        await putVideoRecord({
+          userEmail: currentUser.email,
+          url: 'local-session://' + sessionKey,
+          title: file.name || 'Local media',
+          type,
+          sourceKind: 'local-object-url',
+          localSessionKey: sessionKey,
+          mimeType: file.type || '',
+          originalLocalPath: file.name || '',
+          favorite: false,
+          viewed: false,
+          note: '',
+          tags: [],
+          volume: 1,
+          playbackRate: 1,
+          addedAt: Date.now(),
+          updatedAt: Date.now()
+        });
+        added++;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    if (added) {
+      showToast(`${added}件のローカルファイルを追加しました。`, 'success');
+      await renderVideos();
+    } else {
+      showToast('ローカルファイルの追加に失敗しました', 'error');
+    }
+  }
+
+  async function attachLocalHandles(handles) {
+    if (!handles || !handles.length || !currentUser) return;
+    let added = 0;
+    for (const handle of handles) {
+      try {
+        const file = await getFileFromHandle(handle, true);
+        if (!file) continue;
+        await putVideoRecord({
+          userEmail: currentUser.email,
+          url: 'local-handle://' + (handle.name || file.name || Date.now()),
+          title: file.name || handle.name || 'Local media',
+          type: inferTypeFromMime(file.type, file.name || handle.name),
+          sourceKind: 'local-handle',
+          localHandle: handle,
+          mimeType: file.type || '',
+          originalLocalPath: handle.name || file.name || '',
+          favorite: false,
+          viewed: false,
+          note: '',
+          tags: [],
+          volume: 1,
+          playbackRate: 1,
+          addedAt: Date.now(),
+          updatedAt: Date.now()
+        });
+        added++;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    if (added) {
+      showToast(`${added}件のローカルファイルを追加しました。`, 'success');
+      await renderVideos();
+    } else {
+      showToast('ローカルファイルの追加に失敗しました', 'error');
+    }
+  }
+
+  window.openLocalPicker = async function openLocalPicker() {
+    const pickerInput = document.getElementById('local-media-picker');
+    const acceptSnapshot = pickerInput?.getAttribute('accept') || '';
+    const handles = await pickLocalFilesViaFsAccess(true);
+    if (handles.length) {
+      await attachLocalHandles(handles);
+      return;
+    }
+    const input = document.getElementById('local-media-picker');
+    if (!triggerFilePicker(input)) {
+      showToast('ローカルファイル選択ダイアログを開けませんでした', 'error');
+    }
+    setTimeout(() => { if (pickerInput) pickerInput.setAttribute('accept', acceptSnapshot || 'video/*,audio/*,image/*,.gif,.webp,.mp4,.webm,.mov,.m4v,.mp3,.wav,.m4a,.aac,.flac,.opus'); }, 0);
+  }
+
+  window.relinkLocalFile = async function relinkLocalFile(videoId) {
+    const current = await getVideoById(videoId);
+    const handles = await pickLocalFilesViaFsAccess(false);
+    if (handles.length) {
+      const handle = handles[0];
+      const file = await getFileFromHandle(handle, true);
+      if (!file || !current) return;
+      current.originalLocalPath = current.originalLocalPath || current.url;
+      current.url = 'local-handle://' + (handle.name || file.name || Date.now());
+      current.title = file.name || current.title;
+      current.type = inferTypeFromMime(file.type, file.name) || current.type;
+      current.sourceKind = 'local-handle';
+      current.localHandle = handle;
+      current.localSessionKey = '';
+      current.mimeType = file.type || current.mimeType || '';
+      current.updatedAt = Date.now();
+      await putVideoRecord(current);
+      showToast('ローカルファイルをこのカードに再リンクしました。', 'success');
+      await renderVideos();
+      return;
+    }
+    const input = document.getElementById('local-media-relink-picker');
+    if (!input) return;
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      try {
+        const current = await getVideoById(videoId);
+        const sessionKey = registerLocalSessionFile(file, current?.localSessionKey || '');
+        if (!current) {
+          showToast('対象カードが見つかりません', 'error');
+          return;
+        }
+        current.originalLocalPath = current.originalLocalPath || current.url;
+        current.url = 'local-session://' + sessionKey;
+        current.title = file.name || current.title;
+        current.type = inferTypeFromMime(file.type, file.name) || current.type;
+        current.sourceKind = 'local-object-url';
+        current.localSessionKey = sessionKey;
+        current.localHandle = null;
+        current.mimeType = file.type || current.mimeType || '';
+        current.updatedAt = Date.now();
+        await putVideoRecord(current);
+        showToast('ローカルファイルをこのカードに再リンクしました。', 'success');
+        await renderVideos();
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    if (!triggerFilePicker(input)) showToast('ローカルファイル選択ダイアログを開けませんでした', 'error');
+  }
+
+  function typeLabel(type) {
+    const map = { youtube: 'YouTube', vimeo: 'Vimeo', behance: 'Behance', direct: 'Video', audio: 'Audio', gif: 'GIF', image: 'Image', unknown: 'URL' };
+    return map[type] || type;
+  }
+
+  async function renderVideos() {
+    videosCache = await getVideosForUser(currentUser.email);
+    const grid = document.getElementById('video-grid');
+    const empty = document.getElementById('empty-state');
+    const shown = filteredVideos();
+
+    document.getElementById('topbar-count').textContent = `${videosCache.length} items`;
+    document.getElementById('grid-meta').textContent = `総数 ${videosCache.length}件 / 表示 ${shown.length}件 / お気に入り ${videosCache.filter(v=>v.favorite).length}件 / 選択 ${selectedIds.size}件`;
+    updateStatsRow();
+    updateRecentTagsRow();
+    cleanupRenderedMedia();
+    grid.innerHTML = '';
+
+    const shownIds = new Set(shown.map(v => String(v.id)));
+    Array.from(activeRenderObjectUrls.keys()).forEach(id => { if (!shownIds.has(String(id))) revokeActiveRenderObjectUrl(id); });
+
+    if (!shown.length) {
+      empty.style.display = 'block';
+      document.getElementById('empty-state-sub').textContent = videosCache.length ? '条件に一致するアイテムがありません。検索語やフィルタを見直してください。' : '上のフォームにURLを入力して動画を追加してください';
+      updateSelectionCounter();
+      return;
+    }
+    empty.style.display = 'none';
+
+    for (let i = 0; i < shown.length; i++) {
+      const v = shown[i];
+      v._playableUrl = await ensurePlayableSource(v, false);
+      const parsed = getEffectiveParsed(v);
+      const embed = buildEmbedHtml(v, parsed);
+      const isExternalPage = ['youtube','behance','vimeo'].includes(v.type);
+      const tagsHtml = (v.tags || []).slice(0, 4).map(tag => `<button class="tag-badge clickable" data-tag="${escapeHtml(tag)}">${escapeHtml(tag)}</button>`).join('');
+      const card = document.createElement('article');
+      card.className = 'video-card' + (selectedIds.has(v.id) ? ' selected' : '');
+      card.dataset.id = v.id;
+      card.innerHTML = `
+        <div class="video-card-top">
+          <input class="video-select" type="checkbox" ${selectedIds.has(v.id) ? 'checked' : ''} aria-label="select item" onchange="toggleSelection(${v.id}, this.checked)">
+          <span class="video-index">${String(i+1).padStart(2,'0')}</span>
+          <div class="video-title-wrap">
+            <div class="video-title" title="${escapeHtml(v.title || v.url)}">${escapeHtml(v.title || v.url)}</div>
+            <div class="video-subline">
+              <span class="type-badge">${typeLabel(v.type)}</span>
+              ${isLocalLibraryItem(v) ? '<span class="tag-badge local-library-pill">Local Library</span>' : ''}
+              ${v.favorite ? '<span class="state-badge favorite">★ favorite</span>' : ''}
+              ${v.viewed ? '<span class="state-badge viewed">✓ viewed</span>' : ''}
+              <span class="date-badge">追加 ${formatDate(v.addedAt)}</span><span class="date-badge">更新 ${formatDate(v.updatedAt || v.addedAt)}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="icon-btn favorite ${v.favorite ? 'active' : ''}" title="お気に入り" onclick="toggleFavorite(${v.id})">★</button>
+            <button class="icon-btn viewed ${v.viewed ? 'active' : ''}" title="視聴済み" onclick="toggleViewed(${v.id})">✓</button>
+            <button class="icon-btn" title="編集" onclick="openEditModal(${v.id})">✎</button>
+            ${isExternalPage ? `<button class="icon-btn" title="外部で開く" onclick="window.open('${v.url.replace(/'/g,'&apos;')}','_blank')">↗</button>` : ''}
+            <button class="icon-btn" title="削除" onclick="removeVideo(${v.id})">✕</button>
+          </div>
+        </div>
+        <div class="video-embed-wrap">${embed}</div>
+        ${buildMediaControlsHtml(v)}
+        <div class="video-card-footer">
+          <div class="video-url-row">
+            <span class="video-url-snippet">${escapeHtml(v.url)}</span>
+            <button class="icon-btn" title="URLコピー" onclick="copyUrl('${v.url.replace(/'/g,'&apos;')}', this)">⧉</button>
+          </div>
+          <div class="video-note-row">
+            <span class="video-note-snippet">${escapeHtml(v.note || 'メモなし')}</span>
+          </div>
+          <div class="video-tags-row"><div class="video-tags-wrap">${tagsHtml || '<span class="tag-badge">tagなし</span>'}</div></div>
+        </div>`;
+      grid.appendChild(card);
+      initializeCardMedia(v.id, v);
+
+      if (parsed?.type === 'youtube' && location.protocol !== 'file:') {
+        setTimeout(() => {
+          const iframe = card.querySelector('iframe');
+          if (!iframe) return;
+          let loaded = false;
+          iframe.addEventListener('load', () => { loaded = true; });
+          setTimeout(() => { if (!loaded) window.showYtFallback(parsed.id); }, 3000);
+        }, 100);
+      }
+    }
+    updateSelectionCounter();
+  }
+
+  async function upsertVideoFields(id, patch, opts = {}) {
+    const item = await getVideoById(id);
+    if (!item) return;
+    const nextRecord = { ...item, ...patch, updatedAt: Date.now() };
+    await putVideoRecord(nextRecord);
+    const cacheIndex = videosCache.findIndex(v => String(v.id) === String(id));
+    if (cacheIndex >= 0) videosCache[cacheIndex] = normalizeRecord(nextRecord);
+    if (!opts.skipRender) await renderVideos();
+  }
+
+  window.toggleFavorite = async function(id) { const item = await getVideoById(id); await upsertVideoFields(id, { favorite: !item.favorite }); };
+  window.toggleViewed = async function(id) { const item = await getVideoById(id); await upsertVideoFields(id, { viewed: !item.viewed }); };
+  window.toggleSelection = function(id, checked) { if (checked) selectedIds.add(id); else selectedIds.delete(id); updateSelectionCounter(); renderCardSelectionState(); };
+  function renderCardSelectionState() { document.querySelectorAll('.video-card').forEach(el => el.classList.toggle('selected', selectedIds.has(Number(el.dataset.id)))); }
+
+  window.addUrls = async function() {
+    const raw = document.getElementById('url-input').value;
+    const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return toast('URLを入力してください', 'error');
+
+    const existing = new Set((await getVideosForUser(currentUser.email)).map(v => v.url));
+    let added = 0, duplicated = 0, invalid = 0;
+
+    for (const line of lines) {
+      const parsed = parseVideoUrl(line);
+      if (!parsed) { invalid++; continue; }
+      if (existing.has(line)) { duplicated++; continue; }
+      await addVideoRecord({ userEmail: currentUser.email, url: line, title: getTitle(parsed, line), addedAt: Date.now(), favorite: false, viewed: false, note: '', tags: [], type: parsed.type, volume: 1, playbackRate: 1 });
+      existing.add(line);
+      added++;
+    }
+
+    document.getElementById('url-input').value = '';
+    clearUrlDraft();
+    setDraftStatus('入力欄をクリアしました');
+    await renderVideos();
+    const parts = [];
+    if (added) parts.push(`追加 ${added}`);
+    if (duplicated) parts.push(`重複 ${duplicated}`);
+    if (invalid) parts.push(`無効 ${invalid}`);
+    toast(parts.join(' / ') || '追加対象がありません', added ? 'success' : 'error');
+  };
+
+  window.removeVideo = async function(id) {
+    await deleteVideo(id);
+    selectedIds.delete(id);
+    await renderVideos();
+    toast('削除しました');
+  };
+
+  window.clearAll = async function() {
+    if (!confirm('現在のアカウントの全アイテムを削除しますか？')) return;
+    await clearAllVideos(currentUser.email);
+    selectedIds.clear();
+    await renderVideos();
+    toast('すべて削除しました', 'success');
+  };
+
+  window.copyUrl = function(url, btn) {
+    navigator.clipboard.writeText(url).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(() => { btn.textContent = orig; }, 1000);
+      toast('URLをコピーしました');
+    }).catch(() => toast('コピーに失敗しました', 'error'));
+  };
+
+  let currentLayoutCols = Math.max(1, Math.min(10, Number(prefs.layout || 3)));
+
+  function syncLayoutSliders() {
+    const value = String(currentLayoutCols);
+    const top = document.getElementById('layout-slider-top');
+    const bottom = document.getElementById('layout-slider-bottom');
+    if (top && top.value !== value) top.value = value;
+    if (bottom && bottom.value !== value) bottom.value = value;
+  }
+
+  function applyLayoutCols(n, shouldSave = true) {
+    currentLayoutCols = Math.max(1, Math.min(10, Number(n) || 1));
+    document.documentElement.style.setProperty('--vault-cols', String(currentLayoutCols));
+    syncLayoutSliders();
+    const grid = document.getElementById('video-grid');
+    if (grid) grid.style.gridTemplateColumns = `repeat(${currentLayoutCols}, minmax(260px, 1fr))`;
+    if (shouldSave) savePrefs();
+    // Sync qs-cols buttons (1-5)
+    document.querySelectorAll('#qs-cols .seg-btn').forEach(b => b.classList.toggle('act', Number(b.dataset.col) === currentLayoutCols));
+  }
+
+  window.setLayout = function(n) {
+    applyLayoutCols(n, true);
+  };
+
+  function bumpLayoutCols(delta) {
+    applyLayoutCols(currentLayoutCols + Number(delta || 0), true);
+  }
+
+  window.setMediaViewMode = async function(mode, btnId) {
+    mediaViewMode = mode === 'poster' ? 'poster' : 'player';
+    posterOpenIds.clear();
+    // Sync old media-mode-btns if they still exist
+    document.querySelectorAll('.media-mode-btns .layout-btn').forEach(b => b.classList.remove('active'));
+    if (btnId && document.getElementById(btnId)) document.getElementById(btnId).classList.add('active');
+    // Sync qs-bar
+    document.querySelectorAll('#qs-media-view .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.mv === mediaViewMode));
+    savePrefs();
+    await renderVideos();
+  };
+
+  window.openPosterPlayer = async function(videoId) {
+    posterOpenIds.add(String(videoId));
+    await renderVideos();
+  };
+
+  function bindToolbar() {
+
+    const localPicker = document.getElementById('local-media-picker');
+    if (localPicker && !localPicker.dataset.bound) {
+      localPicker.addEventListener('change', handleLocalPickerChange);
+      localPicker.dataset.bound = '1';
+    }
+
+    const urlInput = document.getElementById('url-input');
+    urlInput.value = getUrlDraft();
+    const updateDraftMetrics = () => {
+      const lines = urlInput.value.split('\n').map(v => v.trim()).filter(Boolean);
+      let valid = 0, invalid = 0;
+      lines.forEach(line => parseVideoUrl(line) ? valid++ : invalid++);
+      setUrlDraft(urlInput.value);
+      setDraftStatus(`<span>下書き ${lines.length}行</span><span>有効 ${valid}</span><span>無効 ${invalid}</span>${urlInput.value ? '<span>自動保存中</span>' : '<span>入力待機中</span>'}`);
+    };
+    updateDraftMetrics();
+    urlInput.addEventListener('input', updateDraftMetrics);
+    document.getElementById('toggle-add-panel-btn').addEventListener('click', () => {
+      const panel = document.getElementById('add-panel');
+      panel.classList.toggle('collapsed');
+      document.getElementById('toggle-add-panel-btn').textContent = panel.classList.contains('collapsed') ? '入力欄をひらく' : '入力欄をたたむ';
+    });
+    document.getElementById('clear-selection-btn').addEventListener('click', () => { selectedIds.clear(); updateSelectionCounter(); renderCardSelectionState(); document.querySelectorAll('.video-select').forEach(box => box.checked = false); });
+    document.getElementById('copy-selected-btn').addEventListener('click', async () => {
+      const rows = getSelectedRows();
+      if (!rows.length) return toast('選択アイテムがありません', 'error');
+      await navigator.clipboard.writeText(rows.map(v => v.url).join('\n'));
+      toast(`${rows.length}件のURLをコピーしました`, 'success');
+    });
+    document.getElementById('open-selected-btn').addEventListener('click', () => {
+      const rows = getSelectedRows();
+      if (!rows.length) return toast('選択アイテムがありません', 'error');
+      rows.slice(0, 10).forEach(v => { if (isLocalLibraryItem(v)) relinkLocalFile(v.id); else window.open(v.url, '_blank'); });
+      toast(`${Math.min(rows.length,10)}件を処理しました`, 'success');
+    });
+    document.getElementById('favorite-selected-btn').addEventListener('click', async () => { await batchPatchSelected(() => ({ favorite: true })); toast('選択項目をお気に入りにしました', 'success'); });
+    document.getElementById('unfavorite-selected-btn').addEventListener('click', async () => { await batchPatchSelected(() => ({ favorite: false })); toast('選択項目のお気に入りを解除しました', 'success'); });
+    document.getElementById('viewed-selected-btn').addEventListener('click', async () => { await batchPatchSelected(() => ({ viewed: true })); toast('選択項目を視聴済みにしました', 'success'); });
+    document.getElementById('unviewed-selected-btn').addEventListener('click', async () => { await batchPatchSelected(() => ({ viewed: false })); toast('選択項目を未視聴に戻しました', 'success'); });
+    document.getElementById('tag-selected-btn').addEventListener('click', async () => {
+      const value = prompt('追加するタグを入力してください（カンマ区切り可）');
+      if (!value) return;
+      const tags = value.split(',').map(v => v.trim()).filter(Boolean);
+      if (!tags.length) return;
+      await batchPatchSelected(row => ({ tags: [...new Set([...(row.tags || []), ...tags])].slice(0, 12) }));
+      toast('タグを追加しました', 'success');
+    });
+    document.getElementById('untag-selected-btn').addEventListener('click', async () => {
+      const value = prompt('削除するタグを入力してください（1つ）');
+      if (!value) return;
+      const tag = value.trim();
+      await batchPatchSelected(row => ({ tags: (row.tags || []).filter(v => v !== tag) }));
+      toast('タグを削除しました', 'success');
+    });
+    document.getElementById('dedupe-btn').addEventListener('click', async () => {
+      const rows = await getVideosForUser(currentUser.email);
+      const seen = new Set();
+      let removed = 0;
+      for (const row of rows.sort((a,b) => (a.addedAt||0) - (b.addedAt||0))) {
+        if (seen.has(row.url)) { await deleteVideo(row.id); selectedIds.delete(row.id); removed++; }
+        else seen.add(row.url);
+      }
+      await renderVideos();
+      toast(removed ? `重複 ${removed}件を整理しました` : '重複はありません', removed ? 'success' : '');
+    });
+    document.getElementById('random-open-btn').addEventListener('click', () => {
+      const rows = filteredVideos();
+      if (!rows.length) return toast('表示中アイテムがありません', 'error');
+      const row = rows[Math.floor(Math.random() * rows.length)];
+      if (isLocalLibraryItem(row)) relinkLocalFile(row.id); else window.open(row.url, '_blank');
+      toast('ランダムに1件開きました', 'success');
+    });
+    document.getElementById('clear-filters-btn').addEventListener('click', async () => {
+      document.getElementById('search-input').value = '';
+      document.getElementById('sort-select').value = 'newest';
+      _currentSort = 'newest';
+      currentFilter = 'all';
+      document.querySelectorAll('#filter-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.filter === 'all'));
+      // QSバーも同期
+      document.querySelectorAll('#qs-filter .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.qf === 'all'));
+      document.querySelectorAll('#qs-sort .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.sort === 'newest'));
+      savePrefs();
+      await renderVideos();
+      toast('条件をリセットしました', 'success');
+    });
+    document.getElementById('shortcuts-btn').addEventListener('click', openShortcutsModal);
+    document.getElementById('search-input').value = prefs.search || '';
+    document.getElementById('sort-select').value = prefs.sort || 'newest';
+    _currentSort = prefs.sort || 'newest';
+    applyLayoutCols(prefs.layout ?? 3, false);
+    syncLayoutSliders();
+    mediaViewMode = prefs.mediaView || 'player';
+    currentFilter = prefs.filter || 'all';
+    document.querySelectorAll('#filter-chips .chip').forEach(chip => chip.classList.toggle('active', chip.dataset.filter === currentFilter));
+
+    document.getElementById('search-input').addEventListener('input', async () => { savePrefs(); await renderVideos(); });
+    document.getElementById('sort-select').addEventListener('change', async () => {
+      const v = document.getElementById('sort-select').value;
+      _currentSort = v;
+      document.querySelectorAll('#qs-sort .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.sort === v));
+      savePrefs();
+      await renderVideos();
+    });
+    ['layout-slider-top','layout-slider-bottom'].forEach(id => {
+      const slider = document.getElementById(id);
+      if (!slider || slider.dataset.bound === '1') return;
+      const handler = e => {
+        applyLayoutCols(Number(e.target.value), true);
+        syncLayoutSliders();
+      };
+      slider.addEventListener('input', handler);
+      slider.addEventListener('change', handler);
+      slider.dataset.bound = '1';
+    });
+    document.querySelectorAll('[data-layout-step]').forEach(btn => {
+      if (btn.dataset.bound === '1') return;
+      btn.addEventListener('click', () => bumpLayoutCols(Number(btn.dataset.layoutStep || 0)));
+      btn.dataset.bound = '1';
+    });
+    document.querySelectorAll('#filter-chips .chip').forEach(chip => chip.addEventListener('click', async () => {
+      currentFilter = chip.dataset.filter;
+      document.querySelectorAll('#filter-chips .chip').forEach(c => c.classList.toggle('active', c === chip));
+      // QSバーの絞込ボタンも同期
+      document.querySelectorAll('#qs-filter .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.qf === currentFilter));
+      savePrefs();
+      await renderVideos();
+    }));
+    document.getElementById('select-all-btn').addEventListener('click', async () => {
+      const shown = filteredVideos();
+      const allSelected = shown.length && shown.every(v => selectedIds.has(v.id));
+      if (allSelected) shown.forEach(v => selectedIds.delete(v.id)); else shown.forEach(v => selectedIds.add(v.id));
+      updateSelectionCounter();
+      renderCardSelectionState();
+      document.querySelectorAll('.video-select').forEach(box => { const card = box.closest('.video-card'); if (card) box.checked = selectedIds.has(Number(card.dataset.id)); });
+    });
+    document.getElementById('bulk-delete-btn').addEventListener('click', async () => {
+      if (!selectedIds.size) return toast('選択項目がありません', 'error');
+      if (!confirm(`選択した ${selectedIds.size} 件を削除しますか？`)) return;
+      for (const id of [...selectedIds]) await deleteVideo(id);
+      selectedIds.clear();
+      await renderVideos();
+      toast('選択項目を削除しました', 'success');
+    });
+    document.getElementById('export-btn').addEventListener('click', async () => {
+      const rows = await getVideosForUser(currentUser.email);
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `vault-export-${Date.now()}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast('JSONを書き出しました: ' + formatDateTime(Date.now()), 'success');
+    });
+    document.getElementById('import-open-btn').addEventListener('click', () => document.getElementById('import-file').click());
+    document.getElementById('import-file').addEventListener('change', importJson);
+  }
+
+  async function importJson(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const rows = JSON.parse(text);
+      if (!Array.isArray(rows)) throw new Error('JSON配列ではありません');
+      const existing = new Set((await getVideosForUser(currentUser.email)).map(v => v.url));
+      let count = 0;
+      for (const row of rows) {
+        if (!row?.url || existing.has(row.url)) continue;
+        const parsed = parseVideoUrl(row.url);
+        await addVideoRecord({
+          userEmail: currentUser.email,
+          url: row.url,
+          title: row.title || getTitle(parsed || { type:'unknown' }, row.url),
+          addedAt: row.addedAt || Date.now(),
+          favorite: !!row.favorite,
+          viewed: !!row.viewed,
+          note: row.note || '',
+          tags: Array.isArray(row.tags) ? row.tags : [],
+          type: row.type || parsed?.type || 'unknown'
+        });
+        existing.add(row.url);
+        count++;
+      }
+      await renderVideos();
+      toast(`JSON読込完了: ${count}件追加`, 'success');
+    } catch (err) {
+      toast('JSON読込に失敗しました: ' + (err?.message || ''), 'error');
+    } finally {
+      e.target.value = '';
+    }
+  }
+
+  window.openEditModal = async function(id) {
+    const item = await getVideoById(id);
+    if (!item) return;
+    editTargetId = id;
+    document.getElementById('edit-title').value = item.title || '';
+    document.getElementById('edit-url').value = item.url || '';
+    document.getElementById('edit-tags').value = (item.tags || []).join(', ');
+    document.getElementById('edit-note').value = item.note || '';
+    document.getElementById('edit-modal').classList.add('open');
+  };
+  window.closeEditModal = function() { editTargetId = null; document.getElementById('edit-modal').classList.remove('open'); };
+  window.saveEditModal = async function() {
+    if (!editTargetId) return;
+    const title = document.getElementById('edit-title').value.trim();
+    const url = document.getElementById('edit-url').value.trim();
+    const parsed = parseVideoUrl(url);
+    if (!parsed) return toast('編集URLが無効です', 'error');
+    const tags = document.getElementById('edit-tags').value.split(',').map(v => v.trim()).filter(Boolean).slice(0, 12);
+    const note = document.getElementById('edit-note').value.trim();
+    await upsertVideoFields(editTargetId, { title: title || 'Untitled', url, type: parsed.type, tags, note });
+    closeEditModal();
+    toast('編集内容を保存しました', 'success');
+  };
+  document.getElementById('edit-modal').addEventListener('click', e => { if (e.target.id === 'edit-modal') closeEditModal(); });
+  window.openShortcutsModal = function() { document.getElementById('shortcuts-modal').classList.add('open'); };
+  window.closeShortcutsModal = function() { document.getElementById('shortcuts-modal').classList.remove('open'); };
+  document.getElementById('shortcuts-modal').addEventListener('click', e => { if (e.target.id === 'shortcuts-modal') closeShortcutsModal(); });
+
+  document.addEventListener('click', async e => {
+    const btn = e.target.closest('.tag-badge.clickable');
+    if (!btn) return;
+    const tag = btn.dataset.tag || btn.textContent || '';
+    document.getElementById('search-input').value = tag;
+    savePrefs();
+    await renderVideos();
+  });
+
+  async function handleRedirectSession() {
+    if (!supabase) return;
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    const authMode = url.searchParams.get('auth_mode');
+    if (!code) return;
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) return showMsg('メールリンクの処理に失敗しました: ' + escapeHtml(error.message), 'error');
+    url.searchParams.delete('code');
+    url.searchParams.delete('auth_mode');
+    window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+    if (authMode === 'recovery') {
+      switchTab('reset');
+      document.getElementById('reset-request-block').style.display = 'none';
+      document.getElementById('reset-update-block').style.display = '';
+      showMsg('認証済みです。新しいパスワードを入力してください。', 'success');
+      return;
+    }
+    if (authMode === 'signup') { showMsg('メール認証が完了しました。ログインしてください。', 'success'); switchTab('login'); }
+  }
+
+  window.switchTab = function(tab) {
+    document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+    document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+    document.getElementById('reset-form').style.display = tab === 'reset' ? '' : 'none';
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    document.getElementById('tab-reset').classList.toggle('active', tab === 'reset');
+    document.getElementById('reset-request-block').style.display = '';
+    document.getElementById('reset-update-block').style.display = 'none';
+    showMsg('', '');
+  };
+
+  async function bootstrapAuth() {
+    if (!supabase) {
+      // Supabase未設定 → ゲストとして自動起動
+      currentUser = { email: GUEST_EMAIL, id: 'guest', isGuest: true };
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('topbar-email').innerHTML = '<span class="guest-badge">Guest Session</span>';
+      await renderVideos();
+      return;
+    }
+    await handleRedirectSession();
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        switchTab('reset');
+        document.getElementById('reset-request-block').style.display = 'none';
+        document.getElementById('reset-update-block').style.display = '';
+        showMsg('新しいパスワードを入力してください。', 'success');
+      }
+      if (event === 'SIGNED_IN' && session?.user) {
+        const url = new URL(window.location.href);
+        const authMode = url.searchParams.get('auth_mode');
+        if (authMode === 'signup' || authMode === 'recovery') return;
+        loginSuccess(session.user);
+      }
+      if (event === 'SIGNED_OUT') handleLogoutUI();
+    });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) loginSuccess(session.user);
+  }
+
+  window.handleGuestLogin = async function() {
+    currentUser = { email: GUEST_EMAIL, id: 'guest', isGuest: true };
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('topbar-email').innerHTML = '<span class="guest-badge">Guest Session</span>';
+    document.getElementById('login-password').value = '';
+    showMsg('', '');
+    await renderVideos();
+    toast('ゲストでログインしました', 'success');
+  };
+  window.handleLogin = async function() {
+    try {
+      if (!supabase) return showMsg('Supabase 設定が未入力です', 'error');
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      if (!isValidEmail(email) || !password) return showMsg('メールアドレスとパスワードを入力してください', 'error');
+      setBusy('login-btn', true);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      loginSuccess(data.user);
+    } catch (e) {
+      const msg = e?.message || 'ログインに失敗しました';
+      if (/Email not confirmed/i.test(msg)) {
+        pendingEmailForResend = document.getElementById('login-email').value.trim();
+        document.getElementById('resend-confirm-btn').style.display = '';
+        showMsg('メール認証が未完了です。受信箱を確認してください。届いていない場合は下の再送ボタンを使ってください。', 'error');
+      } else showMsg(escapeHtml(msg), 'error');
+    } finally { setBusy('login-btn', false); }
+  };
+
+  window.handleRegister = async function() {
+    try {
+      if (!supabase) return showMsg('Supabase 設定が未入力です', 'error');
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const password2 = document.getElementById('reg-password2').value;
+      if (!isValidEmail(email)) return showMsg('正しいメールアドレスを入力してください', 'error');
+      if (password.length < 6) return showMsg('パスワードは6文字以上にしてください', 'error');
+      if (password !== password2) return showMsg('パスワードが一致しません', 'error');
+      setBusy('register-btn', true);
+      const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: currentRedirectUrl('signup') } });
+      if (error) throw error;
+      pendingEmailForResend = email;
+      document.getElementById('resend-confirm-btn').style.display = '';
+      showMsg('確認メールを送信しました。メール内リンクを開いて認証後、ログインしてください。', 'success');
+      switchTab('login');
+      document.getElementById('login-email').value = email;
+    } catch (e) { showMsg(escapeHtml(e?.message || '登録に失敗しました'), 'error'); }
+    finally { setBusy('register-btn', false); }
+  };
+
+  window.handleResendConfirmation = async function() {
+    try {
+      if (!supabase) return showMsg('Supabase 設定が未入力です', 'error');
+      const email = pendingEmailForResend || document.getElementById('login-email').value.trim();
+      if (!isValidEmail(email)) return showMsg('再送先メールアドレスがありません', 'error');
+      const { error } = await supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: currentRedirectUrl('signup') } });
+      if (error) throw error;
+      showMsg('確認メールを再送しました。', 'success');
+    } catch (e) { showMsg(escapeHtml(e?.message || '再送に失敗しました'), 'error'); }
+  };
+
+  window.handleResetRequest = async function() {
+    try {
+      if (!supabase) return showMsg('Supabase 設定が未入力です', 'error');
+      const email = document.getElementById('reset-email').value.trim();
+      if (!isValidEmail(email)) return showMsg('正しいメールアドレスを入力してください', 'error');
+      setBusy('reset-request-btn', true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: currentRedirectUrl('recovery') });
+      if (error) throw error;
+      showMsg('再設定メールを送信しました。受信箱を確認してください。', 'success');
+    } catch (e) { showMsg(escapeHtml(e?.message || '再設定メール送信に失敗しました'), 'error'); }
+    finally { setBusy('reset-request-btn', false); }
+  };
+
+  window.handleResetUpdate = async function() {
+    try {
+      if (!supabase) return showMsg('Supabase 設定が未入力です', 'error');
+      const password = document.getElementById('reset-new-pw').value;
+      const password2 = document.getElementById('reset-new-pw2').value;
+      if (password.length < 6) return showMsg('パスワードは6文字以上にしてください', 'error');
+      if (password !== password2) return showMsg('パスワードが一致しません', 'error');
+      setBusy('reset-update-btn', true);
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      showMsg('パスワードを変更しました。ログインし直してください。', 'success');
+      document.getElementById('reset-new-pw').value = '';
+      document.getElementById('reset-new-pw2').value = '';
+      switchTab('login');
+      await supabase.auth.signOut();
+    } catch (e) { showMsg(escapeHtml(e?.message || 'パスワード変更に失敗しました'), 'error'); }
+    finally { setBusy('reset-update-btn', false); }
+  };
+
+
+  function setupAppSectionSwitcher() { /* No-op: replaced by tab system */ }
+
+  // ── APP TABS ─────────────────────────────────────────────────────
+  let _currentAppTab = 'filter';
+  window.switchAppTab = function(tab) {
+    _currentAppTab = tab;
+    ['filter', 'add', 'actions'].forEach(t => {
+      const btn = document.getElementById('apptab-' + t);
+      const content = document.getElementById('apptab-content-' + t);
+      if (btn) btn.classList.toggle('active', t === tab);
+      if (content) content.classList.toggle('active', t === tab);
+    });
+  };
+
+  function updateAppTabSelectionBadge() {
+    const count = selectedIds.size;
+    const badge = document.getElementById('apptab-sel-badge');
+    if (badge) badge.textContent = count > 0 ? count : '0';
+    // Highlight actions tab if items selected
+    const actBtn = document.getElementById('apptab-actions');
+    if (actBtn) actBtn.style.color = count > 0 ? 'var(--gold2)' : '';
+  }
+
+  // ── QS-BAR binding ──────────────────────────────────────────────
+  function bindQsBar() {
+    // ① 表示モード切替
+    document.querySelectorAll('#qs-media-view .seg-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const mode = btn.dataset.mv;
+        mediaViewMode = mode === 'poster' ? 'poster' : 'player';
+        posterOpenIds.clear();
+        document.querySelectorAll('#qs-media-view .seg-btn').forEach(b => b.classList.toggle('act', b === btn));
+        savePrefs();
+        await renderVideos();
+      });
+    });
+
+    // ② QS列ボタン（1〜5）
+    document.querySelectorAll('#qs-cols .seg-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        applyLayoutCols(Number(btn.dataset.col), true);
+      });
+    });
+
+    // ③ QSソートボタン
+    document.querySelectorAll('#qs-sort .seg-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        _currentSort = btn.dataset.sort;
+        document.getElementById('sort-select').value = btn.dataset.sort;
+        document.querySelectorAll('#qs-sort .seg-btn').forEach(b => b.classList.toggle('act', b === btn));
+        savePrefs();
+        await renderVideos();
+      });
+    });
+
+    // ④ QS絞込ボタン — currentFilter を直接更新してrenderVideos
+    document.querySelectorAll('#qs-filter .seg-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        currentFilter = btn.dataset.qf;
+        document.querySelectorAll('#qs-filter .seg-btn').forEach(b => b.classList.toggle('act', b === btn));
+        // メインのフィルターチップも同期
+        document.querySelectorAll('#filter-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.filter === currentFilter));
+        savePrefs();
+        await renderVideos();
+      });
+    });
+
+    // ⑤ メインsort-selectが変更されたときQSバーも同期（bindToolbar側で処理）
+
+    // ⑥ 初期状態を反映（prefs から）
+    const initMv = prefs.mediaView || 'player';
+    document.querySelectorAll('#qs-media-view .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.mv === initMv));
+    const initSort = prefs.sort || 'newest';
+    document.querySelectorAll('#qs-sort .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.sort === initSort));
+    const initFilter = prefs.filter || 'all';
+    document.querySelectorAll('#qs-filter .seg-btn').forEach(b => b.classList.toggle('act', b.dataset.qf === initFilter));
+    // QS-cols は applyLayoutCols 側で自動同期される
+  }
+
+  function loginSuccess(user) {
+    currentUser = { email: user.email, id: user.id, isGuest: false };
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('topbar-email').textContent = user.email;
+    renderVideos();  // intentionally not awaited (fire-and-forget on login)
+    toast('ログインしました', 'success');
+  }
+  function handleLogoutUI() {
+    currentUser = null;
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('topbar-email').textContent = '';
+    selectedIds.clear();
+    updateSelectionCounter();
+  }
+  window.handleLogout = async function() {
+    if (currentUser && !currentUser.isGuest && supabase) await supabase.auth.signOut();
+    handleLogoutUI();
+    document.getElementById('login-password').value = '';
+    showMsg('', '');
+  };
+
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); document.getElementById('search-input')?.focus(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); document.getElementById('select-all-btn')?.click(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'r') { e.preventDefault(); document.getElementById('clear-filters-btn')?.click(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { if (document.getElementById('app').style.display !== 'none') { e.preventDefault(); window.addUrls(); return; } }
+    if (e.key === '/' && document.activeElement && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) { e.preventDefault(); document.getElementById('search-input')?.focus(); return; }
+    if (e.key === 'Escape') { closeEditModal(); closeShortcutsModal(); }
+    if (e.key !== 'Enter') return;
+    if (document.getElementById('auth-screen').style.display !== 'none') {
+      if (document.getElementById('tab-login').classList.contains('active')) window.handleLogin();
+      else if (document.getElementById('tab-register').classList.contains('active')) window.handleRegister();
+    }
+  });
+
+  await openDB();
+  bindToolbar();
+  setupAppSectionSwitcher();
+  bindQsBar();
+  applyLayoutCols(prefs.layout ?? 3, false);
+  // QS-bar initial state sync happens inside bindQsBar
+  await bootstrapAuth();
+</script>
+</body>
+</html>
