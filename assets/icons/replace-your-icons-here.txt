@@ -1,0 +1,6 @@
+このフォルダに favicon / apple-touch-icon / 独自のメニューアイコン画像を置いてください。
+GitHub Pages では相対パスで参照します。
+例:
+./assets/icons/favicon.svg
+./assets/icons/apple-touch-icon.png
+./assets/icons/menu/play.png
